@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketDataServer", "MarketDataServer\MarketDataServer.csproj", "{8F63F83B-7A80-4CDA-8ECF-F732BE8DB2EB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MarketDataClient", "MarketDataClient\MarketDataClient.csproj", "{A6928D74-509A-4C81-A181-5B0A0C628E71}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8F63F83B-7A80-4CDA-8ECF-F732BE8DB2EB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F63F83B-7A80-4CDA-8ECF-F732BE8DB2EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F63F83B-7A80-4CDA-8ECF-F732BE8DB2EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F63F83B-7A80-4CDA-8ECF-F732BE8DB2EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A6928D74-509A-4C81-A181-5B0A0C628E71}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A6928D74-509A-4C81-A181-5B0A0C628E71}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A6928D74-509A-4C81-A181-5B0A0C628E71}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A6928D74-509A-4C81-A181-5B0A0C628E71}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
