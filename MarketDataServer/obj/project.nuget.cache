@@ -1,10 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "JGJzRf43F3Y=",
+  "dgSpecHash": "P5yo3EI+PIc=",
   "success": true,
   "projectFilePath": "/home/dylandiergaardt/Desktop/MarketDataSimulator/MarketDataServer/MarketDataServer.csproj",
   "expectedPackageFiles": [
-    "/home/dylandiergaardt/.nuget/packages/google.protobuf/3.23.1/google.protobuf.3.23.1.nupkg.sha512",
+    "/home/dylandiergaardt/.nuget/packages/google.protobuf/3.27.2/google.protobuf.3.27.2.nupkg.sha512",
     "/home/dylandiergaardt/.nuget/packages/grpc.aspnetcore/2.57.0/grpc.aspnetcore.2.57.0.nupkg.sha512",
     "/home/dylandiergaardt/.nuget/packages/grpc.aspnetcore.server/2.57.0/grpc.aspnetcore.server.2.57.0.nupkg.sha512",
     "/home/dylandiergaardt/.nuget/packages/grpc.aspnetcore.server.clientfactory/2.57.0/grpc.aspnetcore.server.clientfactory.2.57.0.nupkg.sha512",

@@ -1,0 +1,6 @@
+/home/dylandiergaardt/Desktop/MarketDataSimulator/MarketDataClient/obj/Debug/net8.0/MarketDataClient.csproj.AssemblyReference.cache
+/home/dylandiergaardt/Desktop/MarketDataSimulator/MarketDataClient/obj/Debug/net8.0/MarketDataClient.GeneratedMSBuildEditorConfig.editorconfig
+/home/dylandiergaardt/Desktop/MarketDataSimulator/MarketDataClient/obj/Debug/net8.0/MarketDataClient.AssemblyInfoInputs.cache
+/home/dylandiergaardt/Desktop/MarketDataSimulator/MarketDataClient/obj/Debug/net8.0/MarketDataClient.AssemblyInfo.cs
+/home/dylandiergaardt/Desktop/MarketDataSimulator/MarketDataClient/obj/Debug/net8.0/MarketDataClient.csproj.CoreCompileInputs.cache
+/home/dylandiergaardt/Desktop/MarketDataSimulator/MarketDataClient/obj/Debug/net8.0/MarketDataClient.sourcelink.json

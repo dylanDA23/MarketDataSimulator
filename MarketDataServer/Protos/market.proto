@@ -1,21 +1,51 @@
 syntax = "proto3";
+package market;
+option csharp_namespace = "Market.Proto";
 
-option csharp_namespace = "MarketDataServer";
-
-package greet;
-
-// The greeting service definition.
-service Greeter {
-  // Sends a greeting
-  rpc SayHello (HelloRequest) returns (HelloReply);
+service MarketData {
+  // Bidirectional streaming: client sends SubscriptionRequest messages, server streams MarketDataMessage
+  rpc Subscribe(stream SubscriptionRequest) returns (stream MarketDataMessage);
 }
 
-// The request message containing the user's name.
-message HelloRequest {
-  string name = 1;
+message SubscriptionRequest {
+  string instrumentId = 1;
+  bool unsubscribe = 2;
 }
 
-// The response message containing the greetings.
-message HelloReply {
-  string message = 1;
+message MarketDataMessage {
+  oneof payload {
+    OrderBookSnapshot snapshot = 1;
+    OrderBookUpdate update = 2;
+    EmptySnapshot empty_snapshot = 3;
+  }
 }
+
+message OrderBookSnapshot {
+  string instrumentId = 1;
+  int64 sequence = 2;
+  repeated PriceLevel bids = 3;
+  repeated PriceLevel asks = 4;
+}
+
+message OrderBookUpdate {
+  string instrumentId = 1;
+  int64 sequence = 2;
+  repeated PriceLevelChange changes = 3;
+}
+
+message PriceLevel {
+  double price = 1;
+  double quantity = 2;
+  int32 level = 3;
+}
+
+message PriceLevelChange {
+  enum ChangeType { ADD = 0; UPDATE = 1; REMOVE = 2; }
+  ChangeType type = 1;
+  PriceLevel level = 2;
+}
+
+message EmptySnapshot {
+  string instrumentId = 1;
+}
+

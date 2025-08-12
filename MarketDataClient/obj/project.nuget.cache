@@ -1,9 +1,10 @@
 {
   "version": 2,
-  "dgSpecHash": "xQoTDsGJwsg=",
+  "dgSpecHash": "Dv66AM2iUEY=",
   "success": true,
   "projectFilePath": "/home/dylandiergaardt/Desktop/MarketDataSimulator/MarketDataClient/MarketDataClient.csproj",
   "expectedPackageFiles": [
+    "/home/dylandiergaardt/.nuget/packages/google.protobuf/3.27.2/google.protobuf.3.27.2.nupkg.sha512",
     "/home/dylandiergaardt/.nuget/packages/grpc.core.api/2.57.0/grpc.core.api.2.57.0.nupkg.sha512",
     "/home/dylandiergaardt/.nuget/packages/grpc.net.client/2.57.0/grpc.net.client.2.57.0.nupkg.sha512",
     "/home/dylandiergaardt/.nuget/packages/grpc.net.common/2.57.0/grpc.net.common.2.57.0.nupkg.sha512",
