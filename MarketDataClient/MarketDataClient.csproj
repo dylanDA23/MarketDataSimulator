@@ -8,6 +8,22 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Worker service hosting -->
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+
+    <!-- gRPC client -->
+    <PackageReference Include="Grpc.Net.Client" Version="2.57.0" />
+    <!-- gRPC code generation -->
+    <PackageReference Include="Grpc.Tools" Version="2.57.0" PrivateAssets="All" />
+
+    <!-- EF Core + PostgreSQL -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Use the same proto file as server -->
+    <Protobuf Include="..\MarketDataServer\Protos\market.proto" GrpcServices="Client" />
+  </ItemGroup>
+
 </Project>
