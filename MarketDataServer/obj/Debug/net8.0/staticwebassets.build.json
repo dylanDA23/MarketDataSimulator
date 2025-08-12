@@ -1,0 +1,11 @@
+{
+  "Version": 1,
+  "Hash": "0nVi8B/5ZS93Q3O4RPVvaRVmf/x2iVGcHLlICKM6Dv4=",
+  "Source": "MarketDataServer",
+  "BasePath": "_content/MarketDataServer",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [],
+  "Assets": []
+}
