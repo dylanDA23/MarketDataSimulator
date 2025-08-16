@@ -29,6 +29,7 @@ namespace MarketDataClient.Workers
                 var db = scope.ServiceProvider.GetRequiredService<ClientPersistenceDbContext>();
                 await db.Database.MigrateAsync(stoppingToken);
             }
+            //added comment TODO: setup multi container network
 
             var serverUrl = Environment.GetEnvironmentVariable("MARKETDATA_SERVER_URL") ?? "http://marketdata-server:5000";
 
