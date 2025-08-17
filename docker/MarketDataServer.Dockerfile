@@ -1,41 +1,35 @@
-# Stage 1: build the app using the SDK
+# Build stage
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-# copy csproj(s) and restore as a separate layer for caching
-COPY MarketDataServer/MarketDataServer.csproj MarketDataServer/
-# If the server references other project folders, copy them here first (client doesn't need to be copied)
-# COPY MarketDataShared/*.csproj MarketDataShared/
-RUN dotnet restore MarketDataServer/MarketDataServer.csproj
+# copy csproj and restore
+COPY ../MarketDataServer/MarketDataServer.csproj ./MarketDataServer.csproj
+RUN dotnet restore ./MarketDataServer.csproj
 
 # copy everything and publish
-COPY . .
+COPY .. .
 WORKDIR /src/MarketDataServer
-RUN dotnet publish -c Release -o /app/publish /p:PublishTrimmed=false
+RUN dotnet publish -c Release -o /app/publish
 
-# Stage 2: runtime
+# Runtime stage
 FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
-# Install netcat so entrypoint can nc -z the Postgres host
+
+# Need root to install packages
 USER root
+
+# Install netcat provider explicitly (netcat-openbsd); keep image slim
 RUN apt-get update \
- && apt-get install -y netcat \
+ && apt-get install -y --no-install-recommends netcat-openbsd \
  && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
-# Copy published app from build stage
 COPY --from=build /app/publish ./
 
-# Copy entrypoint script into /app and ensure it is executable
-COPY MarketDataServer/docker/entrypoint.sh /app/entrypoint.sh
+# copy entrypoint script (make sure file path matches your repo)
+COPY ../MarketDataServer/docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
-# Set environment variables for Kestrel
-# Use HTTP (plaintext) on port 5000; if you want TLS for gRPC enable/modify accordingly.
 ENV ASPNETCORE_URLS=http://+:5000
-
-# Expose the port the app listens on (gRPC over HTTP/2 can use 5000 for dev)
 EXPOSE 5000
 
-# Run the shell script as PID 1 (it will exec dotnet and keep signals intact)
 ENTRYPOINT ["/app/entrypoint.sh"]
