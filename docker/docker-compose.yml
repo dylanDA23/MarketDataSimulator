@@ -1,0 +1,74 @@
+version: "3.8"
+
+services:
+  postgres_server:
+    image: postgres:16
+    container_name: postgres_server
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: marketdb
+    # Use the existing named volume 'postgres_data' (external)
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"  # expose on host for dev convenience
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d marketdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  marketdata-server:
+    build:
+      context: ..
+      dockerfile: docker/MarketDataServer.Dockerfile
+    image: marketdata-server:latest
+    container_name: marketdata_server
+    restart: unless-stopped
+    depends_on:
+      - postgres_server
+    environment:
+      # Connection string used by your server app (match your EF Core setup)
+      - ConnectionStrings__DefaultConnection=Host=postgres_server;Port=5432;Database=marketdb;Username=postgres;Password=postgres
+      # Control feed mode in your app config (Simulation or Live)
+      - MarketFeed__Mode=Simulation
+      # If switching to Live:
+      # - MarketFeed__Mode=Live
+      # - MarketFeed__Instruments__0=BTCUSDT
+      # - MarketFeed__Instruments__1=ETHUSDT
+      - PGHOST=postgres_server
+      - PGPORT=5432
+    ports:
+      - "5000:5000"  # map container 5000 -> host 5000
+    networks:
+      - marketnet
+
+  marketdata-client:
+    build:
+      context: ..
+      dockerfile: docker/MarketDataClient.Dockerfile
+    image: marketdata-client:latest
+    container_name: marketdata_client
+    restart: unless-stopped
+    depends_on:
+      - marketdata-server
+      - postgres_server
+    environment:
+      - MARKETDATA_SERVER_URL=http://marketdata-server:5000
+      - PGHOST=postgres_server
+      - PGPORT=5432
+      - INSTRUMENTS=BTCUSDT,ETHUSDT
+    networks:
+      - marketnet
+
+volumes:
+  # Reference the existing named volume created earlier on host
+  postgres_data:
+    external: true
+
+networks:
+  marketnet:
+    driver: bridge

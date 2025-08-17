@@ -21,7 +21,7 @@ namespace MarketDataClient.Workers
             _logger = logger;
         }
 
-        //added comment TODO: test multi-container network at run time.
+        //added comment TODO: test multi-container network at run
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
