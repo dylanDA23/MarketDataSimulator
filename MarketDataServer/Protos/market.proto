@@ -48,4 +48,3 @@ message PriceLevelChange {
 message EmptySnapshot {
   string instrumentId = 1;
 }
-

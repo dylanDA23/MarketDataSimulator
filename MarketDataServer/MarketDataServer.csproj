@@ -15,11 +15,13 @@
     <PackageReference Include="Grpc.AspNetCore" Version="2.57.0" />
     <!-- gRPC codegen -->
     <PackageReference Include="Grpc.Tools" Version="2.57.0" PrivateAssets="All" />
-    <!-- Protobuf runtime (fixes 'Google' namespace errors) -->
+    <!-- Protobuf runtime -->
     <PackageReference Include="Google.Protobuf" Version="3.27.2" />
     <!-- EF Core + PostgreSQL -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+    <!-- HttpClient factory (for Binance REST). No System.Net.WebSockets.Client package needed. -->
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
