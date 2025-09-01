@@ -1,23 +1,23 @@
-namespace MarketDataClient;
+// MarketDataClient/Worker.cs
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
-public class Worker : BackgroundService
+namespace MarketDataClient
 {
-    private readonly ILogger<Worker> _logger;
-
-    public Worker(ILogger<Worker> logger)
+    // Minimal placeholder worker to ensure BackgroundService/ILogger types exist for build.
+    public class Worker : BackgroundService
     {
-        _logger = logger;
-    }
+        private readonly ILogger<Worker> _logger;
 
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        while (!stoppingToken.IsCancellationRequested)
+        public Worker(ILogger<Worker> logger) => _logger = logger;
+
+        protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            if (_logger.IsEnabled(LogLevel.Information))
-            {
-                _logger.LogInformation("Worker running at: {time}", DateTimeOffset.Now);
-            }
-            await Task.Delay(1000, stoppingToken);
+            // No-op placeholder
+            _logger.LogDebug("Worker placeholder running.");
+            return Task.CompletedTask;
         }
     }
 }

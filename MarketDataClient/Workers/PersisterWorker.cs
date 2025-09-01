@@ -1,12 +1,15 @@
+// MarketDataClient/Workers/PersisterWorker.cs
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using System.Text.Json;
 using Grpc.Net.Client;
 using Market.Proto;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MarketDataClient.Data;
-using Microsoft.EntityFrameworkCore;
-using System.Text.Json;
+using Microsoft.EntityFrameworkCore; // <-- REQUIRED for MigrateAsync
 
 namespace MarketDataClient.Workers
 {
@@ -21,66 +24,80 @@ namespace MarketDataClient.Workers
             _logger = logger;
         }
 
-        //added comment TODO: test multi-container network at run
-
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // ensure client DB migrated
-            using (var scope = _sp.CreateScope())
+            // Ensure client DB migrated
+            try
             {
-                var db = scope.ServiceProvider.GetRequiredService<ClientPersistenceDbContext>();
-                await db.Database.MigrateAsync(stoppingToken);
+                using (var scope = _sp.CreateScope())
+                {
+                    var db = scope.ServiceProvider.GetRequiredService<ClientPersistenceDbContext>();
+                    await db.Database.MigrateAsync(stoppingToken);
+                }
             }
-            //added comment TODO: setup multi container network
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to apply migrations (persister). Continuing without DB.");
+            }
 
-            var serverUrl = Environment.GetEnvironmentVariable("MARKETDATA_SERVER_URL") ?? "http://marketdata-server:5000";
+            var serverUrl = Environment.GetEnvironmentVariable("MARKETDATA_SERVER_URL") ?? "http://localhost:5000";
 
             // allow plaintext http2 for local dev
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
-            using var channel = GrpcChannel.ForAddress(serverUrl);
-            var client = new MarketData.MarketDataClient(channel);
-            using var call = client.Subscribe();
-
-            var instruments = (Environment.GetEnvironmentVariable("INSTRUMENTS") ?? "BTCUSDT,ETHUSDT").Split(',', StringSplitOptions.RemoveEmptyEntries);
-            foreach (var ins in instruments) await call.RequestStream.WriteAsync(new SubscriptionRequest { InstrumentId = ins.Trim(), Unsubscribe = false });
-
-            while (await call.ResponseStream.MoveNext(stoppingToken))
+            try
             {
-                var msg = call.ResponseStream.Current;
-                try
-                {
-                    using var scope = _sp.CreateScope();
-                    var db = scope.ServiceProvider.GetRequiredService<ClientPersistenceDbContext>();
+                using var channel = GrpcChannel.ForAddress(serverUrl);
+                var client = new MarketData.MarketDataClient(channel);
+                using var call = client.Subscribe();
 
-                    if (msg.PayloadCase == MarketDataMessage.PayloadOneofCase.Snapshot)
-                    {
-                        var s = msg.Snapshot;
-                        db.Snapshots.Add(new SnapshotEntity
-                        {
-                            InstrumentId = s.InstrumentId,
-                            Sequence = s.Sequence,
-                            SnapshotJson = JsonSerializer.Serialize(s)
-                        });
-                    }
-                    else if (msg.PayloadCase == MarketDataMessage.PayloadOneofCase.Update)
-                    {
-                        var u = msg.Update;
-                        db.Updates.Add(new UpdateEntity
-                        {
-                            InstrumentId = u.InstrumentId,
-                            Sequence = u.Sequence,
-                            UpdateJson = JsonSerializer.Serialize(u)
-                        });
-                    }
-                    await db.SaveChangesAsync(stoppingToken);
-                }
-                catch (Exception ex)
+                var instruments = (Environment.GetEnvironmentVariable("INSTRUMENTS") ?? "BTCUSDT,ETHUSDT")
+                                  .Split(',', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var ins in instruments) await call.RequestStream.WriteAsync(new SubscriptionRequest { InstrumentId = ins.Trim(), Unsubscribe = false });
+
+                while (await call.ResponseStream.MoveNext(stoppingToken))
                 {
-                    _logger.LogError(ex, "Failed to persist message");
+                    var msg = call.ResponseStream.Current;
+                    try
+                    {
+                        using var scope = _sp.CreateScope();
+                        var db = scope.ServiceProvider.GetRequiredService<ClientPersistenceDbContext>();
+
+                        if (msg.PayloadCase == MarketDataMessage.PayloadOneofCase.Snapshot)
+                        {
+                            var s = msg.Snapshot;
+                            db.Snapshots.Add(new SnapshotEntity
+                            {
+                                InstrumentId = s.InstrumentId,
+                                Sequence = s.Sequence,
+                                SnapshotJson = JsonSerializer.Serialize(s),
+                                CreatedAt = DateTime.UtcNow
+                            });
+                        }
+                        else if (msg.PayloadCase == MarketDataMessage.PayloadOneofCase.Update)
+                        {
+                            var u = msg.Update;
+                            db.Updates.Add(new UpdateEntity
+                            {
+                                InstrumentId = u.InstrumentId,
+                                Sequence = u.Sequence,
+                                UpdateJson = JsonSerializer.Serialize(u),
+                                CreatedAt = DateTime.UtcNow
+                            });
+                        }
+                        await db.SaveChangesAsync(stoppingToken);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to persist message");
+                    }
                 }
             }
-
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Persister worker terminated with exception");
+            }
         }
     }
 }

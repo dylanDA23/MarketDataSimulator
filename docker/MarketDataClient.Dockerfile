@@ -2,10 +2,10 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY ../MarketDataClient/MarketDataClient.csproj ./MarketDataClient.csproj
+COPY MarketDataClient/MarketDataClient.csproj ./MarketDataClient.csproj
 RUN dotnet restore ./MarketDataClient.csproj
 
-COPY .. .
+COPY . .
 WORKDIR /src/MarketDataClient
 RUN dotnet publish -c Release -o /app/publish
 
@@ -20,7 +20,7 @@ RUN apt-get update \
 WORKDIR /app
 COPY --from=build /app/publish ./
 
-COPY ../MarketDataClient/docker/entrypoint.sh /app/entrypoint.sh
+COPY MarketDataClient/docker/entrypoint.sh /app/entrypoint.sh
 RUN chmod +x /app/entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]

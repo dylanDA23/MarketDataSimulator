@@ -1,11 +1,18 @@
+// ~/Desktop/MarketDataSimulator/MarketDataServer/Program.cs
 using System;
 using MarketDataServer.Data;
 using MarketDataServer.Sim;
 using MarketDataServer.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Console logging (helpful during dev)
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 // -------------------------------
 // Postgres DB (server)
@@ -23,7 +30,6 @@ builder.Services.AddHttpClient("binance", c =>
 {
     c.BaseAddress = new Uri("https://api.binance.com/");
     c.Timeout = TimeSpan.FromSeconds(10);
-    // helpful to identify requests in logs; not required
     c.DefaultRequestHeaders.UserAgent.ParseAdd("MarketDataServer-BinanceLiveFeed/1.0");
 });
 
@@ -35,12 +41,10 @@ var feedMode = builder.Configuration["MarketFeed:Mode"]
 
 if (feedMode.Equals("Live", StringComparison.OrdinalIgnoreCase))
 {
-    // Live mode -> use BinanceLiveFeed which consumes the named "binance" HttpClient
     builder.Services.AddSingleton<IMarketDataFeed, BinanceLiveFeed>();
 }
 else
 {
-    // Simulation fallback
     builder.Services.AddSingleton<IMarketDataFeed, SimulationFeed>();
 }
 
@@ -51,18 +55,32 @@ builder.Services.AddGrpc();
 
 var app = builder.Build();
 
-// Ensure DB schema applied at startup
+// Ensure DB schema applied at startup (safe: uses service scope)
 using (var scope = app.Services.CreateScope())
 {
-    var db = scope.ServiceProvider.GetRequiredService<ServerPersistenceDbContext>();
-    db.Database.Migrate();
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<ServerPersistenceDbContext>();
+        db.Database.Migrate();
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogWarning(ex, "Database migrate failed (continuing): {Message}", ex.Message);
+    }
 }
 
-// Start the OrderBookManager / feed
+// Start the OrderBookManager / feed — THIS IS THE CRITICAL PART
 var obMgr = app.Services.GetRequiredService<OrderBookManager>();
+// Start asynchronously, don't await here (fire & forget is fine; manager should observe app lifetime)
 _ = obMgr.StartAsync(app.Lifetime.ApplicationStopping);
 
+// Map gRPC service and a plain HTTP root for quick checks
 app.MapGrpcService<MarketDataService>();
-app.MapGet("/", () => $"MarketDataServer (gRPC) running. FeedMode={feedMode}");
+app.MapGet("/", (ILogger<Program> logger) =>
+{
+    logger.LogInformation("Root endpoint requested. FeedMode={FeedMode}", feedMode);
+    return Results.Text($"MarketDataServer (gRPC) running. FeedMode={feedMode}", "text/plain");
+});
 
 app.Run();

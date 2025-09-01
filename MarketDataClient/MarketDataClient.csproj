@@ -1,31 +1,34 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
-
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
+    <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <UserSecretsId>dotnet-MarketDataClient-a9b0e738-6454-4229-80c7-f1108e67da34</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- Worker service hosting -->
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
-
     <!-- gRPC client -->
     <PackageReference Include="Grpc.Net.Client" Version="2.57.0" />
-    <!-- gRPC code generation -->
     <PackageReference Include="Grpc.Tools" Version="2.57.0" PrivateAssets="All" />
-    <!-- Protobuf runtime (fixes 'Google' namespace errors) -->
     <PackageReference Include="Google.Protobuf" Version="3.27.2" />
 
-    <!-- EF Core + PostgreSQL -->
+    <!-- EF Core + PostgreSQL (for optional persistence) -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
+
+    <!-- Console UI + CLI -->
+    <PackageReference Include="Spectre.Console" Version="0.44.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+
+    <!-- Microsoft Extensions for hosting, logging, DI and HttpClientFactory -->
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Use the same proto file as server -->
+    <!-- share the proto with the server project -->
     <Protobuf Include="..\MarketDataServer\Protos\market.proto" GrpcServices="Client" />
   </ItemGroup>
-
 </Project>

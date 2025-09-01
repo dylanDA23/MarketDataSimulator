@@ -1,3 +1,4 @@
+// ~/Desktop/MarketDataSimulator/MarketDataServer/Services/MarketDataService.cs
 using System;
 using System.Threading.Tasks;
 using Grpc.Core;
@@ -36,34 +37,10 @@ namespace MarketDataServer.Services
                         if (req.Unsubscribe)
                         {
                             _manager.UnsubscribeClient(clientId, req.InstrumentId);
-
-                            // Optionally notify the client with an EmptySnapshot (existing behavior in manager.UnsubscribeClient)
                         }
                         else
                         {
                             _manager.SubscribeClientToInstrument(clientId, req.InstrumentId);
-
-                            // TEMPORARY DEBUG: send a single test snapshot to this client so the client UI path can be validated.
-                            // This writes directly into this client's personal channel; the send loop below will deliver it to the response stream.
-                            try
-                            {
-                                var snap = new OrderBookSnapshot
-                                {
-                                    InstrumentId = req.InstrumentId,
-                                    Sequence = 1
-                                };
-                                snap.Bids.Add(new PriceLevel { Price = 20000.00, Quantity = 1.2345, Level = 0 });
-                                snap.Asks.Add(new PriceLevel { Price = 20010.00, Quantity = 0.9876, Level = 0 });
-                                var msg = new MarketDataMessage { Snapshot = snap };
-
-                                // Use TryWrite (non-blocking); if it fails it's okay for debug
-                                channel.Writer.TryWrite(msg);
-                                Console.WriteLine($"[DEBUG] Wrote test snapshot to client {clientId} for instrument {req.InstrumentId}.");
-                            }
-                            catch (Exception ex)
-                            {
-                                Console.WriteLine($"[DEBUG] Failed to write test snapshot: {ex}");
-                            }
                         }
                     }
                 }
@@ -88,7 +65,6 @@ namespace MarketDataServer.Services
                         catch (OperationCanceledException) { throw; }
                         catch (Exception ex)
                         {
-                            // If writing to the response stream fails, just log and continue/exit loop
                             Console.WriteLine($"[DEBUG] Error writing to response stream for client {clientId}: {ex}");
                         }
                     }

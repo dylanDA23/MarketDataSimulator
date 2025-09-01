@@ -10,11 +10,10 @@
 using System;
 using System.Reflection;
 
-[assembly: Microsoft.Extensions.Configuration.UserSecrets.UserSecretsIdAttribute("dotnet-MarketDataClient-a9b0e738-6454-4229-80c7-f1108e67da34")]
 [assembly: System.Reflection.AssemblyCompanyAttribute("MarketDataClient")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a1e9fc2b0073c29016f6bcb7ca80791853bee98f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6f425270f8c1e3bd248f8396a75748bfc78f06a9")]
 [assembly: System.Reflection.AssemblyProductAttribute("MarketDataClient")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MarketDataClient")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
