@@ -1,4 +1,3 @@
-// ~/Desktop/MarketDataSimulator/MarketDataServer/Program.cs
 using System;
 using MarketDataServer.Data;
 using MarketDataServer.Sim;
@@ -14,7 +13,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-// -------------------------------
+
 // Postgres DB (server)
 var serverConn = builder.Configuration["Server:Postgres:Connection"]
                  ?? Environment.GetEnvironmentVariable("SERVER_POSTGRES_CONN")
@@ -23,9 +22,8 @@ var serverConn = builder.Configuration["Server:Postgres:Connection"]
 builder.Services.AddDbContext<ServerPersistenceDbContext>(opts =>
     opts.UseNpgsql(serverConn));
 
-// -------------------------------
+
 // Named HttpClient for Binance REST calls (used by BinanceLiveFeed)
-// Place this BEFORE registering BinanceLiveFeed so the feed can request the named client.
 builder.Services.AddHttpClient("binance", c =>
 {
     c.BaseAddress = new Uri("https://api.binance.com/");
@@ -33,7 +31,6 @@ builder.Services.AddHttpClient("binance", c =>
     c.DefaultRequestHeaders.UserAgent.ParseAdd("MarketDataServer-BinanceLiveFeed/1.0");
 });
 
-// -------------------------------
 // Choose feed mode by env var MARKET_FEED_MODE or MarketFeed:Mode config
 var feedMode = builder.Configuration["MarketFeed:Mode"]
                ?? Environment.GetEnvironmentVariable("MARKET_FEED_MODE")
@@ -48,7 +45,6 @@ else
     builder.Services.AddSingleton<IMarketDataFeed, SimulationFeed>();
 }
 
-// -------------------------------
 // Other services
 builder.Services.AddSingleton<OrderBookManager>();
 builder.Services.AddGrpc();
@@ -70,9 +66,7 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Start the OrderBookManager / feed — THIS IS THE CRITICAL PART
 var obMgr = app.Services.GetRequiredService<OrderBookManager>();
-// Start asynchronously, don't await here (fire & forget is fine; manager should observe app lifetime)
 _ = obMgr.StartAsync(app.Lifetime.ApplicationStopping);
 
 // Map gRPC service and a plain HTTP root for quick checks

@@ -1,4 +1,3 @@
-// ~/Desktop/MarketDataSimulator/MarketDataServer/Sim/OrderBookManager.cs
 using System;
 using System.Collections.Concurrent;
 using System.Threading;

@@ -1,4 +1,3 @@
-// ~/Desktop/MarketDataSimulator/MarketDataServer/Services/MarketDataService.cs
 using System;
 using System.Threading.Tasks;
 using Grpc.Core;

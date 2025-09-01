@@ -11,6 +11,20 @@ namespace MarketDataClient
     {
         static async Task<int> Main(string[] args)
         {
+           
+            if (args != null && args.Length > 0 &&
+                (args.Any(a => a.StartsWith("--applicationName", StringComparison.OrdinalIgnoreCase))
+                 || args.Any(a => a.StartsWith("--depsfile", StringComparison.OrdinalIgnoreCase))
+                 || args.Any(a => a.StartsWith("--additionalProbingPath", StringComparison.OrdinalIgnoreCase))
+                 || args.Any(a => a.StartsWith("--fx-version", StringComparison.OrdinalIgnoreCase))
+                 || args.Any(a => a.StartsWith("--runtimeconfig", StringComparison.OrdinalIgnoreCase))
+                 || args.Any(a => a.StartsWith("--additionalProbingPaths", StringComparison.OrdinalIgnoreCase))
+                 || args.Any(a => a.StartsWith("--roll-forward", StringComparison.OrdinalIgnoreCase))))
+            {
+                // Return success quickly; dotnet-ef will proceed to use the design-time factory.
+                return 0;
+            }
+
             var root = new RootCommand("MarketDataClient console UI (Spectre.Console + System.CommandLine)");
 
             var serverOption = new Option<string>(
@@ -113,7 +127,8 @@ namespace MarketDataClient
                 }
             }, serverOption, instrumentsOption, persistOption);
 
-            return await root.InvokeAsync(args);
+            // Pass a non-null args array to avoid CS8604 analyzer warning.
+            return await root.InvokeAsync(args ?? Array.Empty<string>());
         }
     }
 }
