@@ -1,8 +1,6 @@
-// MarketDataClient/UI/ConsoleModels.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;
-// MarketDataClient/UI/ConsoleModels.cs
 using System;
 using System.Collections.Generic;
 using System.Linq;

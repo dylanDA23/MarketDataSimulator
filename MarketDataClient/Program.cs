@@ -1,4 +1,3 @@
-// MarketDataClient/Program.cs
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
