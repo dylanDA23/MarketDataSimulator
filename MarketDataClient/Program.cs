@@ -78,9 +78,7 @@ namespace MarketDataClient
                     if (instrumentsList.Length == 0) instrumentsList = new[] { "BTCUSDT" };
                 }
 
-                // If the user asked for persistence but we have no EF packages at runtime,
-                // we'll let it fail loudly as the developer should have EF packages in csproj.
-                // Build and/or start a Host only if --persist is true.
+                
                 IHost? host = null;
                 try
                 {
@@ -158,7 +156,6 @@ namespace MarketDataClient
                 }
             }, serverOption, instrumentsOption, persistOption);
 
-            // Avoid CS8604 warning by passing an empty array if args is null
             return await root.InvokeAsync(args ?? Array.Empty<string>());
         }
     }

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Logging;
 
 namespace MarketDataClient
 {
-    // Minimal placeholder worker to ensure BackgroundService/ILogger types exist for build.
+    
     public class Worker : BackgroundService
     {
         private readonly ILogger<Worker> _logger;
