@@ -1,9 +1,16 @@
+// MarketDataClient/Program.cs
 using System;
 using System.CommandLine;
 using System.CommandLine.Invocation;
 using System.Linq;
+using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Spectre.Console;
+using MarketDataClient.Data;
+using MarketDataClient.Workers;
 
 namespace MarketDataClient
 {
@@ -25,6 +32,7 @@ namespace MarketDataClient
                 return 0;
             }
 
+            // CLI options (same as previous)
             var root = new RootCommand("MarketDataClient console UI (Spectre.Console + System.CommandLine)");
 
             var serverOption = new Option<string>(
@@ -41,76 +49,92 @@ namespace MarketDataClient
 
             var persistOption = new Option<bool>(
                 aliases: new[] { "--persist", "-P" },
-                description: "Persist incoming messages to local DB (NOT enabled in this lightweight build).",
+                description: "Persist incoming messages to local DB.",
                 getDefaultValue: () => false);
 
             root.AddOption(serverOption);
             root.AddOption(instrumentsOption);
             root.AddOption(persistOption);
 
-            // Defensive handler: catches and reports exceptions from the client run.
+            // Handler
             root.SetHandler(async (string server, string[] instruments, bool persist) =>
             {
+                // Normalize inputs
+                var serverUrl = string.IsNullOrWhiteSpace(server)
+                    ? Environment.GetEnvironmentVariable("MARKETDATA_SERVER_URL") ?? "http://localhost:5000"
+                    : server;
+
+                string[] instrumentsList;
+                if (instruments == null || instruments.Length == 0)
+                    instrumentsList = new[] { "BTCUSDT" };
+                else
+                {
+                    instrumentsList = instruments
+                        .Where(s => !string.IsNullOrWhiteSpace(s))
+                        .SelectMany(s => s.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                        .Select(s => s.Trim().ToUpperInvariant())
+                        .Where(s => !string.IsNullOrEmpty(s))
+                        .ToArray();
+                    if (instrumentsList.Length == 0) instrumentsList = new[] { "BTCUSDT" };
+                }
+
+                // If the user asked for persistence but we have no EF packages at runtime,
+                // we'll let it fail loudly as the developer should have EF packages in csproj.
+                // Build and/or start a Host only if --persist is true.
+                IHost? host = null;
                 try
                 {
-                    // Normalize / validate server URL
-                    var serverUrl = string.IsNullOrWhiteSpace(server)
-                        ? Environment.GetEnvironmentVariable("MARKETDATA_SERVER_URL") ?? "http://localhost:5000"
-                        : server;
-
-                    // Normalize instruments: split comma-separated entries and trim, uppercase
-                    string[] instrumentsList;
-                    if (instruments == null || instruments.Length == 0)
+                    if (persist)
                     {
-                        instrumentsList = new[] { "BTCUSDT" };
+                        // read connection string from environment (the design-time factory also uses the same env var)
+                        var conn = Environment.GetEnvironmentVariable("CLIENT_POSTGRES_CONN")
+                                   ?? Environment.GetEnvironmentVariable("SERVER_POSTGRES_CONN")
+                                   ?? "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=marketdb";
+
+                        host = Host.CreateDefaultBuilder()
+                            .ConfigureServices((ctx, services) =>
+                            {
+                                // Register DbContext and PersisterWorker as a hosted service
+                                services.AddDbContext<ClientPersistenceDbContext>(options =>
+                                    options.UseNpgsql(conn, b => b.EnableRetryOnFailure()));
+
+                                services.AddHostedService<PersisterWorker>();
+
+                                // Give PersisterWorker access to IHttpClientFactory if it needs one
+                                services.AddHttpClient();
+                            })
+                            .Build();
+
+                        // Start the host (background services will begin)
+                        await host.StartAsync();
+                        AnsiConsole.MarkupLine("[green]Persistence enabled:[/] Persister worker started.");
                     }
                     else
                     {
-                        instrumentsList = instruments
-                            .Where(s => !string.IsNullOrWhiteSpace(s))
-                            .SelectMany(s => s.Split(',', StringSplitOptions.RemoveEmptyEntries))
-                            .Select(s => s.Trim().ToUpperInvariant())
-                            .Where(s => !string.IsNullOrEmpty(s))
-                            .ToArray();
-
-                        if (instrumentsList.Length == 0)
-                            instrumentsList = new[] { "BTCUSDT" };
+                        AnsiConsole.MarkupLine("[yellow]Note:[/] persistence (--persist) not requested. Running UI only.");
                     }
 
-                    // Small, robust startup UI that avoids DI extension method calls.
+                    // Run the console UI client which subscribes to the gRPC server
                     AnsiConsole.Clear();
                     AnsiConsole.Write(new FigletText("MarketDataClient").Centered());
 
-                    // Escape untrusted strings before injecting into Spectre.Markup
                     var escServer = Markup.Escape(serverUrl);
                     var escInstruments = Markup.Escape(string.Join(',', instrumentsList));
-
-                    // Use GruvboxTheme color but escape markup inputs
                     try
                     {
                         AnsiConsole.MarkupLine($"[{GruvboxTheme.BrightAqua}]Server:[/] {escServer} [grey]| Instruments:[/] {escInstruments}");
                     }
                     catch
                     {
-                        // Fallback if color/style parsing fails for any reason
                         AnsiConsole.WriteLine($"Server: {escServer} | Instruments: {escInstruments}");
                     }
 
-                    if (persist)
-                    {
-                        AnsiConsole.MarkupLine("[yellow]Note:[/] persistence (--persist) is disabled in this build. To enable it you must add EF and hosting packages to the project. See the README notes.");
-                    }
-
-                    using var http = new System.Net.Http.HttpClient();
-                    // Now pass only non-null, validated values (silences CS8604)
+                    using var http = new HttpClient();
                     var client = new MarketDataConsoleClient(serverUrl, instrumentsList, http, persist);
-
-                    // If RunAsync throws, we will catch below and print a helpful message
                     await client.RunAsync();
                 }
                 catch (Exception ex)
                 {
-                    // Display the error in the console UI clearly and rethrow (to give non-zero exit code if desired)
                     try
                     {
                         AnsiConsole.MarkupLine($"[red]Unhandled client error:[/] {Markup.Escape(ex.Message)}");
@@ -118,16 +142,23 @@ namespace MarketDataClient
                     }
                     catch
                     {
-                        // If markup/rendering fails, fall back to Console.WriteLine
                         Console.WriteLine("Unhandled client error: " + ex.ToString());
                     }
 
-                    // Re-throw so the process exits non-zero and you can see the stack / CI can detect failure
                     throw;
+                }
+                finally
+                {
+                    if (host != null)
+                    {
+                        // shutdown the host cleanly when console UI exits
+                        await host.StopAsync();
+                        host.Dispose();
+                    }
                 }
             }, serverOption, instrumentsOption, persistOption);
 
-            // Pass a non-null args array to avoid CS8604 analyzer warning.
+            // Avoid CS8604 warning by passing an empty array if args is null
             return await root.InvokeAsync(args ?? Array.Empty<string>());
         }
     }

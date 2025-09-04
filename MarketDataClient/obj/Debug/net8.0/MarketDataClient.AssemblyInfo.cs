@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MarketDataClient")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+ca96f479108d76d193634dd3dc908fb0b9f14fe6")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+dcaa9a3f1a32a99047196676e9379b15ad81056e")]
 [assembly: System.Reflection.AssemblyProductAttribute("MarketDataClient")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MarketDataClient")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
