@@ -1,30 +1,11 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using System;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using Market.Proto;
-using Microsoft.Extensions.Logging;
-using System.Net.Http;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using System.Net.Http;
+using System.Text.Json.Serialization;
+
 
 namespace MarketDataServer.Sim
 {
@@ -43,7 +24,7 @@ namespace MarketDataServer.Sim
         public event Func<OrderBookUpdate, Task>? UpdateReceived;
 
         // Shared deserializer options (case-insensitive property name matching)
-        private static readonly JsonSerializerOptions _jsonOpts = new() { PropertyNameCaseInsensitive = true };
+        private static readonly JsonSerializerOptions _jsonOpts = new() { PropertyNameCaseInsensitive = false };
 
         public BinanceLiveFeed(ILogger<BinanceLiveFeed> logger, IHttpClientFactory httpFactory)
         {
@@ -242,11 +223,11 @@ namespace MarketDataServer.Sim
             long lastUpdateId = snapshot.LastUpdateId;
             _logger.LogInformation("REST snapshot for {symbol} lastUpdateId={id}", symbol, lastUpdateId);
 
-            // Step 2: find first buffered message that satisfies U <= lastUpdateId+1 <= u
+            //find first buffered message that satisfies U <= lastUpdateId+1 <= u
             BinanceDepthMessage? matching = null;
             var buffered = new List<BinanceDepthMessage>();
 
-            // Keep trying to accumulate buffered messages until we find the 'matching' message that bridges snapshot
+            // Keep trying to accumulate buffered messages until the 'matching' message that bridges snapshot is found
             while (!ct.IsCancellationRequested)
             {
                 while (q.TryDequeue(out var item))
@@ -325,7 +306,7 @@ namespace MarketDataServer.Sim
         // Convert Binance depth update message to OrderBookUpdate proto (simple mapping)
         private static OrderBookUpdate UpdateFromDepthMessage(BinanceDepthMessage msg)
         {
-            var u = new OrderBookUpdate { InstrumentId = msg.s, Sequence = msg.E }; // use event time E as sequence
+            var u = new OrderBookUpdate { InstrumentId = msg.s, Sequence = msg.u }; // use final update id 'u' as sequence
             foreach (var b in msg.b)
             {
                 var price = double.Parse(b[0], CultureInfo.InvariantCulture);
@@ -354,21 +335,39 @@ namespace MarketDataServer.Sim
         // DTOs for Binance JSON
         private class BinanceDepthMessage
         {
-            public string e { get; set; } = default!; // event type
-            public long E { get; set; } // event time
-            public string s { get; set; } = default!; // symbol
-            public long U { get; set; } // first update ID in event
-            public long u { get; set; } // final update ID in event
-            public List<List<string>> b { get; set; } = new(); // bids [ [price, qty], ... ]
-            public List<List<string>> a { get; set; } = new(); // asks
-        }
+            [JsonPropertyName("e")]
+            public string EventType { get; set; } = default!; // maps to JSON 'e'
 
+            [JsonPropertyName("E")]
+            public long EventTime { get; set; }                   // maps to JSON 'E'
+
+            [JsonPropertyName("s")]
+            public string s { get; set; } = default!;             // symbol (s)
+
+            [JsonPropertyName("U")]
+            public long U { get; set; }                           // first update ID in event
+
+            [JsonPropertyName("u")]
+            public long u { get; set; }                           // final update ID in event
+
+            [JsonPropertyName("b")]
+            public List<List<string>> b { get; set; } = new();    // bids [ [price, qty], ... ]
+
+            [JsonPropertyName("a")]
+            public List<List<string>> a { get; set; } = new();    // asks
+        }
         private class DepthSnapshot
         {
-            // Note: property names differ from Binance JSON case; using PropertyNameCaseInsensitive = true above makes this bind
+            [JsonPropertyName("lastUpdateId")]
             public long LastUpdateId { get; set; }
+
+            [JsonPropertyName("symbol")]
             public string Symbol { get; set; } = string.Empty;
+
+            [JsonPropertyName("bids")]
             public List<List<string>> Bids { get; set; } = new();
+
+            [JsonPropertyName("asks")]
             public List<List<string>> Asks { get; set; } = new();
         }
     }
