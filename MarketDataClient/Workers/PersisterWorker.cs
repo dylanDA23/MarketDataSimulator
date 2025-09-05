@@ -1,7 +1,3 @@
-// MarketDataClient/Workers/PersisterWorker.cs
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Text.Json;
 using Grpc.Net.Client;
 using Market.Proto;
@@ -28,7 +24,7 @@ namespace MarketDataClient.Workers
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Apply DB migrations (best-effort)
+            //Apply DB migrations (best-effort)
             try
             {
                 using (var scope = _sp.CreateScope())
@@ -45,10 +41,10 @@ namespace MarketDataClient.Workers
 
             var serverUrl = Environment.GetEnvironmentVariable("MARKETDATA_SERVER_URL") ?? "http://localhost:5000";
 
-            // allow plaintext http2 for local dev
+            //allow plaintext http2 for local dev
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
-            // keep trying forever until stoppingToken requests cancellation
+            //keep trying forever until stoppingToken requests cancellation
             int attempt = 0;
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -69,11 +65,11 @@ namespace MarketDataClient.Workers
                         _logger.LogDebug("Persister subscribed to {Instrument}", ins.Trim());
                     }
 
-                    // Reset attempt counter on successful connect
+                    //Reset attempt counter on successful connect
                     attempt = 0;
                     _logger.LogInformation("Persister connected and listening for messages.");
 
-                    // Read stream until cancellation or error
+                    //Read stream until cancellation or error
                     while (await call.ResponseStream.MoveNext(stoppingToken))
                     {
                         var msg = call.ResponseStream.Current;
@@ -123,7 +119,7 @@ namespace MarketDataClient.Workers
                         }
                     }
 
-                    // If response stream completes (server closed) we'll loop and reconnect.
+                    //If response stream completes, loop and reconnect.
                     _logger.LogWarning("Persister response stream ended — will attempt reconnect.");
                 }
                 catch (OperationCanceledException) // shutdown requested
@@ -144,7 +140,7 @@ namespace MarketDataClient.Workers
                     _logger.LogError(ex, "Persister worker terminated with exception — will retry.");
                 }
 
-                // exponential backoff with jitter
+                //exponential backoff with jitter
                 var backoff = Math.Min(30, (int)Math.Pow(2, Math.Min(attempt, 6)));
                 var jitter = new Random().Next(0, 1000);
                 var delayMs = backoff * 1000 + jitter;

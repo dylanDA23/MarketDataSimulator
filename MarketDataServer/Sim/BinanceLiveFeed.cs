@@ -19,7 +19,7 @@ namespace MarketDataServer.Sim
         private readonly ConcurrentDictionary<string, ConcurrentQueue<BinanceDepthMessage>> _buffers = new();
         private readonly ConcurrentDictionary<string, long> _latestProcessedU = new();
 
-        // events - conform to IMarketDataFeed
+        // events  conform to IMarketDataFeed
         public event Func<OrderBookSnapshot, Task>? SnapshotReceived;
         public event Func<OrderBookUpdate, Task>? UpdateReceived;
 
@@ -66,7 +66,7 @@ namespace MarketDataServer.Sim
             return ValueTask.CompletedTask;
         }
 
-        // Outer loop: keep trying to connect / re-establish websocket if it fails (simple exponential backoff)
+        // Outer loop, keep trying to re-establish websocket if it fails 
         private async Task MainLoopWithReconnectAsync(CancellationToken ct)
         {
             var backoffMs = 1000;
@@ -94,7 +94,7 @@ namespace MarketDataServer.Sim
         // Single connection/session run
         private async Task RunOnceAsync(CancellationToken ct)
         {
-            // Build combined stream URL
+            //Build combined stream URL
             var streams = string.Join("/", _config.Instruments.Select(s => $"{s.ToLowerInvariant()}@depth@100ms"));
             var url = $"wss://stream.binance.com:9443/stream?streams={streams}";
 
@@ -106,13 +106,13 @@ namespace MarketDataServer.Sim
 
             _logger.LogInformation("Connected to Binance websocket.");
 
-            // Reader task: receive combined-stream JSON messages and enqueue parsed depth messages
+            //Reader task, receive combined-stream JSON messages and enqueue parsed depth messages
             var readTask = Task.Run(async () =>
             {
                 var buffer = new ArraySegment<byte>(new byte[64 * 1024]);
                 while (!ct.IsCancellationRequested && client.State == WebSocketState.Open)
                 {
-                    // assemble full message
+                    //assemble full message
                     using var ms = new MemoryStream();
                     WebSocketReceiveResult result;
                     do
@@ -139,7 +139,7 @@ namespace MarketDataServer.Sim
                             var dataJson = dataEl.GetRawText();
                             var sym = stream.Split('@')[0].ToUpperInvariant();
 
-                            // Deserialize using case-insensitive option to be robust
+                            //Deserialize using case-insensitive option to be robust
                             var depth = JsonSerializer.Deserialize<BinanceDepthMessage>(dataJson, _jsonOpts);
                             if (depth != null)
                             {
@@ -161,10 +161,10 @@ namespace MarketDataServer.Sim
                 }
             }, ct);
 
-            // For each instrument, launch its per-instrument sync/processing loop (they run until cancelled)
+            //For each instrument, launch its per-instrument sync/processing loop (they run until cancelled)
             var tasks = _config.Instruments.Select(ins => Task.Run(() => PerInstrumentSyncLoop(ins.ToUpperInvariant(), ct), ct)).ToArray();
 
-            // Wait until cancellation or any task fails
+            //Wait until cancellation or any task fails
             var all = Task.WhenAll(tasks.Concat(new[] { readTask }));
             try
             {
@@ -172,7 +172,7 @@ namespace MarketDataServer.Sim
             }
             finally
             {
-                // ensure websocket closed
+                //ensure websocket closed
                 if (client.State == WebSocketState.Open)
                 {
                     try { await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "shutting down", CancellationToken.None); } catch { }
@@ -180,13 +180,13 @@ namespace MarketDataServer.Sim
             }
         }
 
-        // Per-instrument safe sync and ongoing processing
+        //Per-instrument safe sync and ongoing processing
         private async Task PerInstrumentSyncLoop(string instrument, CancellationToken ct)
         {
             // small initial delay for buffer to accumulate
             await Task.Delay(200, ct);
 
-            // queue for this instrument
+            //queue for this instrument
             if (!_buffers.TryGetValue(instrument, out var q))
             {
                 _logger.LogWarning("PerInstrumentSyncLoop started for unknown instrument {instrument}", instrument);
@@ -195,7 +195,7 @@ namespace MarketDataServer.Sim
 
             var http = _httpFactory.CreateClient("binance");
 
-            // Step 1: fetch REST snapshot (BaseAddress must be set on the named client)
+            //fetch REST snapshot (BaseAddress must be set on the named client)
             var symbol = instrument.ToUpperInvariant();
             var restUrl = $"api/v3/depth?symbol={symbol}&limit=1000";
             _logger.LogInformation("Fetching REST snapshot for {symbol} from {restUrl}", symbol, restUrl);

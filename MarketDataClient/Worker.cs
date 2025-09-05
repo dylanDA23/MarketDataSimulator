@@ -14,7 +14,7 @@ namespace MarketDataClient
 
         protected override Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // No-op placeholder
+            //No-op placeholder
             _logger.LogDebug("Worker placeholder running.");
             return Task.CompletedTask;
         }

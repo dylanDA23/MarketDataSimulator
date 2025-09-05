@@ -12,8 +12,8 @@ namespace MarketDataClient.Data
     {
         public ClientPersistenceDbContext CreateDbContext(string[] args)
         {
-            // Environment variable to control the connection string for migrations
-            // If not set, fall back to a sensible local default.
+            //Environment variable to control the connection string for migrations
+          
             var conn = Environment.GetEnvironmentVariable("CLIENT_POSTGRES_CONN")
                        ?? Environment.GetEnvironmentVariable("SERVER_POSTGRES_CONN")
                        ?? "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=marketdb";

@@ -9,12 +9,12 @@ using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Console logging (helpful during dev)
+//Console logging 
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
 
-// Postgres DB (server)
+//Postgres DB 
 var serverConn = builder.Configuration["Server:Postgres:Connection"]
                  ?? Environment.GetEnvironmentVariable("SERVER_POSTGRES_CONN")
                  ?? "Host=postgres_server;Port=5432;Username=postgres;Password=postgres;Database=marketdb";
@@ -23,7 +23,7 @@ builder.Services.AddDbContext<ServerPersistenceDbContext>(opts =>
     opts.UseNpgsql(serverConn));
 
 
-// Named HttpClient for Binance REST calls (used by BinanceLiveFeed)
+//Named HttpClient for Binance REST calls 
 builder.Services.AddHttpClient("binance", c =>
 {
     c.BaseAddress = new Uri("https://api.binance.com/");
@@ -45,13 +45,13 @@ else
     builder.Services.AddSingleton<IMarketDataFeed, SimulationFeed>();
 }
 
-// Other services
+//Other services
 builder.Services.AddSingleton<OrderBookManager>();
 builder.Services.AddGrpc();
 
 var app = builder.Build();
 
-// Ensure DB schema applied at startup (safe: uses service scope)
+//Ensure DB schema applied at startup (safe: uses service scope)
 using (var scope = app.Services.CreateScope())
 {
     try
@@ -69,7 +69,7 @@ using (var scope = app.Services.CreateScope())
 var obMgr = app.Services.GetRequiredService<OrderBookManager>();
 _ = obMgr.StartAsync(app.Lifetime.ApplicationStopping);
 
-// Map gRPC service and a plain HTTP root for quick checks
+//Map gRPC service and a plain HTTP root for quick checks
 app.MapGrpcService<MarketDataService>();
 app.MapGet("/", (ILogger<Program> logger) =>
 {

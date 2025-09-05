@@ -1,10 +1,4 @@
-// MarketDataClient/Program.cs
-using System;
 using System.CommandLine;
-using System.CommandLine.Invocation;
-using System.Linq;
-using System.Net.Http;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -28,11 +22,11 @@ namespace MarketDataClient
                  || args.Any(a => a.StartsWith("--additionalProbingPaths", StringComparison.OrdinalIgnoreCase))
                  || args.Any(a => a.StartsWith("--roll-forward", StringComparison.OrdinalIgnoreCase))))
             {
-                // Return success quickly; dotnet-ef will proceed to use the design-time factory.
+                //Return success quickly.
                 return 0;
             }
 
-            // CLI options (same as previous)
+            //CLI options 
             var root = new RootCommand("MarketDataClient console UI (Spectre.Console + System.CommandLine)");
 
             var serverOption = new Option<string>(
@@ -56,10 +50,10 @@ namespace MarketDataClient
             root.AddOption(instrumentsOption);
             root.AddOption(persistOption);
 
-            // Handler
+            //Handler
             root.SetHandler(async (string server, string[] instruments, bool persist) =>
             {
-                // Normalize inputs
+                //Normalize inputs
                 var serverUrl = string.IsNullOrWhiteSpace(server)
                     ? Environment.GetEnvironmentVariable("MARKETDATA_SERVER_URL") ?? "http://localhost:5000"
                     : server;
@@ -84,7 +78,7 @@ namespace MarketDataClient
                 {
                     if (persist)
                     {
-                        // read connection string from environment (the design-time factory also uses the same env var)
+                        //read connection string from environment (the design-time factory also uses the same env var)
                         var conn = Environment.GetEnvironmentVariable("CLIENT_POSTGRES_CONN")
                                    ?? Environment.GetEnvironmentVariable("SERVER_POSTGRES_CONN")
                                    ?? "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=marketdb";
@@ -92,18 +86,18 @@ namespace MarketDataClient
                         host = Host.CreateDefaultBuilder()
                             .ConfigureServices((ctx, services) =>
                             {
-                                // Register DbContext and PersisterWorker as a hosted service
+                                //Register DbContext and PersisterWorker as a hosted service
                                 services.AddDbContext<ClientPersistenceDbContext>(options =>
                                     options.UseNpgsql(conn, b => b.EnableRetryOnFailure()));
 
                                 services.AddHostedService<PersisterWorker>();
 
-                                // Give PersisterWorker access to IHttpClientFactory if it needs one
+                                //Give PersisterWorker access to IHttpClientFactory if it needs one
                                 services.AddHttpClient();
                             })
                             .Build();
 
-                        // Start the host (background services will begin)
+                        //Start the host 
                         await host.StartAsync();
                         AnsiConsole.MarkupLine("[green]Persistence enabled:[/] Persister worker started.");
                     }
@@ -112,7 +106,7 @@ namespace MarketDataClient
                         AnsiConsole.MarkupLine("[yellow]Note:[/] persistence (--persist) not requested. Running UI only.");
                     }
 
-                    // Run the console UI client which subscribes to the gRPC server
+                    //Run the console UI client which subscribes to the gRPC server
                     AnsiConsole.Clear();
                     AnsiConsole.Write(new FigletText("MarketDataClient").Centered());
 
@@ -149,7 +143,7 @@ namespace MarketDataClient
                 {
                     if (host != null)
                     {
-                        // shutdown the host cleanly when console UI exits
+                        //shutdown the host cleanly when console UI exits
                         await host.StopAsync();
                         host.Dispose();
                     }
