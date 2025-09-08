@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Market.Proto;
@@ -17,10 +18,16 @@ namespace MarketDataServer.Sim
         private readonly ConcurrentDictionary<string, (ChannelWriter<MarketDataMessage> writer, ConcurrentDictionary<string, byte> subs)> _clients
             = new();
 
+        // store the latest snapshot for each instrument (uppercase key)
+        private readonly ConcurrentDictionary<string, OrderBookSnapshot> _latestSnapshots
+            = new(StringComparer.OrdinalIgnoreCase);
+
         public OrderBookManager(IMarketDataFeed feed, ILogger<OrderBookManager> logger)
         {
             _feed = feed ?? throw new ArgumentNullException(nameof(feed));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            // subscribe to feed events
             _feed.SnapshotReceived += OnSnapshot;
             _feed.UpdateReceived += OnUpdate;
         }
@@ -46,10 +53,32 @@ namespace MarketDataServer.Sim
         public void SubscribeClientToInstrument(string clientId, string instrumentId)
         {
             if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(instrumentId)) return;
+
             instrumentId = instrumentId.Trim().ToUpperInvariant();
-            if (!_clients.ContainsKey(clientId)) return;
-            _clients[clientId].subs[instrumentId] = 1;
+
+            if (!_clients.TryGetValue(clientId, out var clientEntry)) return;
+
+            clientEntry.subs[instrumentId] = 1;
             _logger.LogDebug("Client {ClientId} subscribed to {Instrument}", clientId, instrumentId);
+
+            // Immediately send latest snapshot (if any) to the newly subscribed client
+            if (_latestSnapshots.TryGetValue(instrumentId, out var latest))
+            {
+                try
+                {
+                    clientEntry.writer.TryWrite(new MarketDataMessage { Snapshot = latest });
+                    _logger.LogInformation("Sent latest snapshot to client {ClientId} for {Instrument} (seq={Seq})",
+                        clientId, instrumentId, latest.Sequence);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send latest snapshot to client {ClientId} for {Instrument}", clientId, instrumentId);
+                }
+            }
+            else
+            {
+                _logger.LogDebug("No stored snapshot available yet for {Instrument} when client {ClientId} subscribed", instrumentId, clientId);
+            }
         }
 
         public void UnsubscribeClient(string clientId, string instrumentId)
@@ -69,14 +98,35 @@ namespace MarketDataServer.Sim
         private Task OnSnapshot(OrderBookSnapshot snapshot)
         {
             if (snapshot == null) return Task.CompletedTask;
-            Broadcast(snapshot.InstrumentId?.Trim().ToUpperInvariant() ?? string.Empty, new MarketDataMessage { Snapshot = snapshot });
+            var key = snapshot.InstrumentId?.Trim().ToUpperInvariant() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(key)) return Task.CompletedTask;
+
+            // store latest snapshot (overwrite)
+            _latestSnapshots[key] = snapshot;
+
+            // log receipt (important debug line)
+            _logger.LogInformation("[SNAPSHOT] Received snapshot for {Instrument} seq={Seq}", key, snapshot.Sequence);
+
+            // count how many currently subscribed clients would receive it
+            var subscriberCount = _clients.Values.Count(e => e.subs.ContainsKey(key));
+            _logger.LogInformation("[SNAPSHOT] Broadcasting snapshot for {Instrument} to {Count} subscribers", key, subscriberCount);
+
+            // broadcast to subscribed clients
+            Broadcast(key, new MarketDataMessage { Snapshot = snapshot });
             return Task.CompletedTask;
         }
 
         private Task OnUpdate(OrderBookUpdate update)
         {
             if (update == null) return Task.CompletedTask;
-            Broadcast(update.InstrumentId?.Trim().ToUpperInvariant() ?? string.Empty, new MarketDataMessage { Update = update });
+            var key = update.InstrumentId?.Trim().ToUpperInvariant() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(key)) return Task.CompletedTask;
+
+            // log update receipt for visibility
+            _logger.LogDebug("[UPDATE] Received update for {Instrument} seq={Seq}", key, update.Sequence);
+
+            // Note: updates do not change the stored snapshot here (we keep the last full snapshot).
+            Broadcast(key, new MarketDataMessage { Update = update });
             return Task.CompletedTask;
         }
 
@@ -90,7 +140,11 @@ namespace MarketDataServer.Sim
                 {
                     if (kv.Value.subs.ContainsKey(instrumentIdUpper))
                     {
-                        kv.Value.writer.TryWrite(msg);
+                        var wrote = kv.Value.writer.TryWrite(msg);
+                        if (!wrote)
+                        {
+                            _logger.LogWarning("TryWrite returned false for client {ClientId} instrument {Instrument}", kv.Key, instrumentIdUpper);
+                        }
                     }
                 }
                 catch (Exception ex)
