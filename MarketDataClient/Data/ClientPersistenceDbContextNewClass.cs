@@ -1,7 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 
 namespace MarketDataClient.Data
@@ -9,6 +6,7 @@ namespace MarketDataClient.Data
     public class ClientPersistenceDbContext : DbContext
     {
         public ClientPersistenceDbContext(DbContextOptions<ClientPersistenceDbContext> options) : base(options) { }
+
         public DbSet<SnapshotEntity> Snapshots { get; set; }
         public DbSet<UpdateEntity> Updates { get; set; }
     }
