@@ -1,4 +1,3 @@
-// File: MarketDataClient/Program.cs
 using System.CommandLine;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -18,7 +17,7 @@ namespace MarketDataClient
     {
         static async Task<int> Main(string[] args)
         {
-            // Top-level cancellation source: will be cancelled by Ctrl+C
+            // Top-level cancellation source, will be cancelled by Ctrl+C
             using var cts = new CancellationTokenSource();
             Console.CancelKeyPress += (sender, e) =>
             {
@@ -91,25 +90,24 @@ namespace MarketDataClient
                 {
                     if (persist)
                     {
-                        // read connection string from environment (the design-time factory also uses the same env var)
+                        // read connection string from environment 
                         var conn = Environment.GetEnvironmentVariable("CLIENT_POSTGRES_CONN")
                                    ?? Environment.GetEnvironmentVariable("SERVER_POSTGRES_CONN")
                                    ?? "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=marketdb";
 
-                        // Create a host for the persister but route console logs to stderr and
-                        // silence EF Core console noise from stdout (EF logs still end up in the file).
+                        // Create a host for the persister but route console logs to stderr 
                         host = Host.CreateDefaultBuilder()
                             .ConfigureLogging(logging =>
                             {
-                                // Make console logger send logs to stderr so we can redirect them to a file if desired
+                                // Make console logger send logs to stderr so it can be redirect to a file if desired
                                 logging.ClearProviders();
                                 logging.AddConsole(opts =>
                                 {
-                                    // route all logged messages to stderr (so stdout remains the UI)
+                                    // route all logged messages to stderr 
                                     opts.LogToStandardErrorThreshold = LogLevel.Trace;
                                 });
 
-                                // Reduce EF Core console noise. They will still be written to the file if someone redirects stderr.
+                                // Reduce EF Core console noise. 
                                 logging.AddFilter("Microsoft.EntityFrameworkCore", LogLevel.Warning);
                                 logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
 
@@ -130,7 +128,7 @@ namespace MarketDataClient
                             })
                             .Build();
 
-                        // Start the host - pass the top-level token so Ctrl+C cancels startup/host
+                        
                         await host.StartAsync(cts.Token);
                         AnsiConsole.MarkupLine("[green]Persistence enabled:[/] Persister worker started.");
                     }
@@ -166,7 +164,7 @@ namespace MarketDataClient
                 }
                 catch (OperationCanceledException)
                 {
-                    // expected on Ctrl+C - nothing to do
+                    // expected on Ctrl+C -
                 }
                 catch (Exception ex)
                 {
