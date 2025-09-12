@@ -1,4 +1,3 @@
-// File: MarketDataClient/Workers/PersisterWorker.cs
 using System;
 using System.IO;
 using System.Text.Json;
@@ -22,7 +21,7 @@ namespace MarketDataClient.Workers
         private readonly IServiceProvider _sp;
         private readonly ILogger<PersisterWorker> _logger;
 
-        // persistent fallback log file (guaranteed append) so you can inspect persister actions even if console logging is mis-routed.
+        // persistent fallback log file so persister actions can be inspected even if console logging is mis-routed.
         private readonly string _persisterLogPath;
 
         public PersisterWorker(IServiceProvider sp, ILogger<PersisterWorker> logger)
@@ -44,19 +43,17 @@ namespace MarketDataClient.Workers
         {
             try
             {
-                // keep it minimal: timestamp + text newline
                 File.AppendAllText(_persisterLogPath, $"{DateTime.UtcNow:o} {text}\n");
             }
             catch
             {
-                // don't crash the worker for logging failures
                 try { _logger.LogDebug("Unable to write to persister log file at {Path}", _persisterLogPath); } catch { }
             }
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Apply DB migrations (best-effort)
+            // Apply DB migrations 
             try
             {
                 using (var scope = _sp.CreateScope())
@@ -102,7 +99,7 @@ namespace MarketDataClient.Workers
                     {
                         if (stoppingToken.IsCancellationRequested) break;
 
-                        // Many gRPC client versions don't accept a cancellation token on WriteAsync.
+                        
                         // We check stoppingToken before calling and break if cancellation requested.
                         await call.RequestStream.WriteAsync(new SubscriptionRequest { InstrumentId = ins.Trim(), Unsubscribe = false });
                         _logger.LogDebug("Persister subscribed to {Instrument}", ins.Trim());
@@ -133,7 +130,7 @@ namespace MarketDataClient.Workers
                             using var scope = _sp.CreateScope();
                             var db = scope.ServiceProvider.GetRequiredService<ClientPersistenceDbContext>();
 
-                            // Try to get the shared MarketDataService (may be null if not registered)
+                            // Trying to get the shared MarketDataService (may be null if not registered)
                             var hub = _sp.GetService<MarketDataService>();
 
                             if (msg.PayloadCase == MarketDataMessage.PayloadOneofCase.Snapshot)
@@ -154,7 +151,7 @@ namespace MarketDataClient.Workers
                                     ent.Id, ent.InstrumentId, ent.Sequence);
                                 PersistToLocalFile($"Persisted SNAPSHOT Id={ent.Id} Instrument={ent.InstrumentId} Seq={ent.Sequence}");
 
-                                // Forward to shared in-memory service for UI consumption (if present)
+                                // Forward to shared in-memory service for UI consumption 
                                 try { hub?.ApplySnapshot(s); } catch (Exception ex) { _logger.LogWarning(ex, "Failed to apply snapshot to hub"); }
                             }
                             else if (msg.PayloadCase == MarketDataMessage.PayloadOneofCase.Update)
@@ -175,13 +172,13 @@ namespace MarketDataClient.Workers
                                     ent.Id, ent.InstrumentId, ent.Sequence);
                                 PersistToLocalFile($"Persisted UPDATE Id={ent.Id} Instrument={ent.InstrumentId} Seq={ent.Sequence}");
 
-                                // Forward to shared in-memory service for UI consumption (if present)
+                                // Forward to shared in-memory service for UI consumption 
                                 try { hub?.ApplyUpdate(u); } catch (Exception ex) { _logger.LogWarning(ex, "Failed to apply update to hub"); }
                             }
                         }
                         catch (OperationCanceledException)
                         {
-                            // cancellation requested while persisting - break out so cleanup can occur
+                            // cancellation requested while persisting, break out so cleanup can occur
                             PersistToLocalFile("OperationCanceledException while persisting");
                             break;
                         }
@@ -200,7 +197,7 @@ namespace MarketDataClient.Workers
                 {
                     _logger.LogInformation("Persister cancellation requested, cleaning up...");
                     PersistToLocalFile("Cancellation requested - cleaning up");
-                    // fall through to finally where we will attempt to complete the request stream
+                    
                     break;
                 }
                 catch (RpcException rex) when (rex.StatusCode == Grpc.Core.StatusCode.Unavailable || rex.StatusCode == Grpc.Core.StatusCode.Internal)
@@ -220,7 +217,7 @@ namespace MarketDataClient.Workers
                 }
                 finally
                 {
-                    // Attempt to tell the server we're done (best-effort).
+                    // Attempt to tell the server we're done.
                     try
                     {
                         if (call != null)

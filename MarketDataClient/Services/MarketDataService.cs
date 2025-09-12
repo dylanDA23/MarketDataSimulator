@@ -6,12 +6,9 @@ using MarketDataClient.UI;
 
 namespace MarketDataClient.Services
 {
-    /// <summary>
+    
     /// A simple in-memory hub for orderbook state that both the PersisterWorker
-    /// and the console UI can use. When persistence is enabled the PersisterWorker
-    /// is the single gRPC consumer and it forwards snapshots/updates here; the UI
-    /// reads from this service instead of opening a second gRPC connection.
-    /// </summary>
+    /// and the console UI can use.
     public class MarketDataService
     {
         private readonly ConcurrentDictionary<string, OrderBookModel> _books
@@ -53,9 +50,9 @@ namespace MarketDataClient.Services
             GetOrCreate(upd.InstrumentId).ApplyUpdate(upd);
         }
 
-        /// <summary>
+        
         /// Read-only view for UI rendering loops.
-        /// </summary>
+        
         public IReadOnlyDictionary<string, OrderBookModel> GetAll() => _books;
     }
 }
