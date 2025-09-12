@@ -18,7 +18,7 @@ namespace MarketDataServer.Sim
         private readonly ConcurrentDictionary<string, (ChannelWriter<MarketDataMessage> writer, ConcurrentDictionary<string, byte> subs)> _clients
             = new();
 
-        // store the latest snapshot for each instrument (uppercase key)
+        // store the latest snapshot for each instrument 
         private readonly ConcurrentDictionary<string, OrderBookSnapshot> _latestSnapshots
             = new(StringComparer.OrdinalIgnoreCase);
 
@@ -61,7 +61,7 @@ namespace MarketDataServer.Sim
             clientEntry.subs[instrumentId] = 1;
             _logger.LogDebug("Client {ClientId} subscribed to {Instrument}", clientId, instrumentId);
 
-            // Immediately send latest snapshot (if any) to the newly subscribed client
+            // Immediately send latest snapshotto the newly subscribed client
             if (_latestSnapshots.TryGetValue(instrumentId, out var latest))
             {
                 try
@@ -101,7 +101,7 @@ namespace MarketDataServer.Sim
             var key = snapshot.InstrumentId?.Trim().ToUpperInvariant() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(key)) return Task.CompletedTask;
 
-            // store latest snapshot (overwrite)
+            // store latest snapshot 
             _latestSnapshots[key] = snapshot;
 
             // log receipt (important debug line)
@@ -125,7 +125,7 @@ namespace MarketDataServer.Sim
             // log update receipt for visibility
             _logger.LogDebug("[UPDATE] Received update for {Instrument} seq={Seq}", key, update.Sequence);
 
-            // Note: updates do not change the stored snapshot here (we keep the last full snapshot).
+            // Updates do not change the stored snapshot here 
             Broadcast(key, new MarketDataMessage { Update = update });
             return Task.CompletedTask;
         }

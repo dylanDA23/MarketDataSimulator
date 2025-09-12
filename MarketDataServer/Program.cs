@@ -1,4 +1,3 @@
-// File: MarketDataServer/Program.cs
 using System;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,7 +51,7 @@ builder.Services.AddGrpc();
 
 var app = builder.Build();
 
-// Ensure DB schema applied at startup (safe: uses service scope)
+// Ensure DB schema applied at startup 
 using (var scope = app.Services.CreateScope())
 {
     try
@@ -68,7 +67,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 var obMgr = app.Services.GetRequiredService<OrderBookManager>();
-// Start the feed manager tied to the application's stopping token (existing behavior).
+// Start the feed manager tied to the application's stopping token.
 _ = obMgr.StartAsync(app.Lifetime.ApplicationStopping);
 
 // Map gRPC service and a plain HTTP root for quick checks
@@ -83,18 +82,17 @@ app.MapGet("/", (ILogger<Program> logger) =>
 using var topLevelCts = new CancellationTokenSource();
 
 // Wire Ctrl+C (SIGINT) to request graceful shutdown.
-// e.Cancel = true prevents the process from being terminated immediately by the runtime, allowing a graceful shutdown.
 Console.CancelKeyPress += (sender, e) =>
 {
     try
     {
-        e.Cancel = true; // prevent abrupt termination; allow graceful shutdown
+        e.Cancel = true; 
         var logger = app.Services.GetRequiredService<ILogger<Program>>();
         logger.LogInformation("Shutdown requested (Ctrl+C) - initiating graceful shutdown.");
     }
     catch
     {
-        // ignore if logger can't be acquired
+        
     }
 
     // Cancel the top-level token and request application stop so hosted services get ApplicationStopping.
@@ -104,18 +102,17 @@ Console.CancelKeyPress += (sender, e) =>
 
 try
 {
-    // Start the web app and wait for shutdown or Ctrl+C (topLevelCts.Token)
+    // Start the web app and wait for shutdown or Ctrl+C 
     await app.StartAsync(topLevelCts.Token);
 
     var startLogger = app.Services.GetRequiredService<ILogger<Program>>();
     startLogger.LogInformation("MarketDataServer started. Press Ctrl+C to shut down.");
 
-    // Wait for shutdown. Passing the topLevelCts.Token means Ctrl+C cancels this wait.
     await app.WaitForShutdownAsync(topLevelCts.Token);
 }
 catch (OperationCanceledException)
 {
-    // expected when Ctrl+C is pressed - fall through to shutdown cleanup
+    
 }
 finally
 {
@@ -127,10 +124,10 @@ finally
     }
     catch (OperationCanceledException)
     {
-        // timed out during shutdown
+        
     }
     catch
     {
-        // ignore other errors during shutdown
+        
     }
 }
