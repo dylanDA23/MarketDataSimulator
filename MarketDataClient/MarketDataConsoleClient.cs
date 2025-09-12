@@ -1,4 +1,3 @@
-// File: MarketDataClient/MarketDataConsoleClient.cs
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -53,14 +52,14 @@ namespace MarketDataClient
             }
         }
 
-        /// <summary>
-        /// Original no-arg RunAsync kept for compatibility - calls into the token-taking overload with CancellationToken.None.
-        /// </summary>
+        
+        // Original no-arg RunAsync kept for compatibility, calls into the token-taking overload with CancellationToken.None.
+    
         public Task RunAsync() => RunAsync(CancellationToken.None);
 
-        /// <summary>
-        /// Run the client, responding to the provided cancellation token (eg. from Program's Ctrl+C handler).
-        /// </summary>
+        
+        // Run the client, responding to the provided cancellation token (eg. from Program's Ctrl+C handler).
+        
         public async Task RunAsync(CancellationToken externalToken)
         {
             // create a linked token so we can cancel internal tasks if external token is cancelled
@@ -128,7 +127,7 @@ namespace MarketDataClient
             else
             {
                 // Shared mode (persistence enabled): the PersisterWorker is the only gRPC consumer.
-                // We simply render from the shared MarketDataService.
+                
                 await RenderLoopAsync(token);
                 _cts.Cancel();
             }
@@ -138,7 +137,7 @@ namespace MarketDataClient
         {
             var refreshDelay = TimeSpan.FromMilliseconds(150);
 
-            // Figlet header (uncolored)
+            
             AnsiConsole.Clear();
             AnsiConsole.Write(new FigletText("MarketDataClient").Centered());
 
@@ -146,7 +145,7 @@ namespace MarketDataClient
             var headerColor = SafeColorTag(GruvboxTheme.BrightAqua);
             AnsiConsole.MarkupLine($"[{headerColor}]Connected to CLI mode - Gruvbox theme active[/]");
 
-            // --- last sequence tracker to avoid redraws when nothing changed ---
+            // last sequence tracker to avoid redraws when nothing changed
             var lastSeq = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
             foreach (var ins in _instruments)
                 lastSeq[ins] = 0L;
@@ -234,9 +233,9 @@ namespace MarketDataClient
             }
         }
 
-        /// <summary>
+        
         /// Request the console client to stop (can be called from Ctrl+C handler).
-        /// </summary>
+      
         public void RequestStop() => _cts.Cancel();
 
         private string FormatLevel(MarketDataClient.UI.PriceLevelModel lvl)
