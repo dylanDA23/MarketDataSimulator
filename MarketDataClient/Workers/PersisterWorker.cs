@@ -1,4 +1,3 @@
-// File: MarketDataClient/Workers/PersisterWorker.cs
 using System;
 using System.IO;
 using System.Text.Json;
@@ -21,6 +20,8 @@ namespace MarketDataClient.Workers
     {
         private readonly IServiceProvider _sp;
         private readonly ILogger<PersisterWorker> _logger;
+
+        // persistent fallback log file so persister actions can be inspected even if console logging is mis-routed.
         private readonly string _persisterLogPath;
 
         public PersisterWorker(IServiceProvider sp, ILogger<PersisterWorker> logger)
@@ -52,14 +53,16 @@ namespace MarketDataClient.Workers
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            // Apply DB migrations (best-effort)
+            // Apply DB migrations 
             try
             {
-                using var scope = _sp.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<ClientPersistenceDbContext>();
-                await db.Database.MigrateAsync(stoppingToken);
-                _logger.LogInformation("Client DB migrations applied (persister).");
-                PersistToLocalFile("Migrations applied");
+                using (var scope = _sp.CreateScope())
+                {
+                    var db = scope.ServiceProvider.GetRequiredService<ClientPersistenceDbContext>();
+                    await db.Database.MigrateAsync(stoppingToken);
+                    _logger.LogInformation("Client DB migrations applied (persister).");
+                    PersistToLocalFile("Migrations applied");
+                }
             }
             catch (Exception ex)
             {
@@ -72,6 +75,7 @@ namespace MarketDataClient.Workers
             // allow plaintext http2 for local dev
             AppContext.SetSwitch("System.Net.Http.SocketsHttpHandler.Http2UnencryptedSupport", true);
 
+            // keep trying forever until stoppingToken requests cancellation
             int attempt = 0;
             while (!stoppingToken.IsCancellationRequested)
             {
@@ -94,6 +98,9 @@ namespace MarketDataClient.Workers
                     foreach (var ins in instruments)
                     {
                         if (stoppingToken.IsCancellationRequested) break;
+
+                        
+                        // We check stoppingToken before calling and break if cancellation requested.
                         await call.RequestStream.WriteAsync(new SubscriptionRequest { InstrumentId = ins.Trim(), Unsubscribe = false });
                         _logger.LogDebug("Persister subscribed to {Instrument}", ins.Trim());
                         PersistToLocalFile($"Subscribed {ins.Trim()}");
@@ -101,6 +108,7 @@ namespace MarketDataClient.Workers
 
                     if (stoppingToken.IsCancellationRequested) break;
 
+                    // Reset attempt counter on successful connect
                     attempt = 0;
                     _logger.LogInformation("Persister connected and listening for messages.");
                     PersistToLocalFile("Connected and listening");
@@ -110,22 +118,24 @@ namespace MarketDataClient.Workers
                     {
                         var msg = call.ResponseStream.Current;
 
-                        // persistent minimal log: what kind of payload we received
-                        try { PersistToLocalFile($"Received message: PayloadCase={msg.PayloadCase}"); } catch { }
+                        // quick persistent log for incoming message types
+                        try
+                        {
+                            PersistToLocalFile($"Received message: PayloadCase={msg.PayloadCase}");
+                        }
+                        catch { }
 
                         try
                         {
                             using var scope = _sp.CreateScope();
                             var db = scope.ServiceProvider.GetRequiredService<ClientPersistenceDbContext>();
 
-                            // Shared in-memory hub (if registered)
+                            // Trying to get the shared MarketDataService (may be null if not registered)
                             var hub = _sp.GetService<MarketDataService>();
 
                             if (msg.PayloadCase == MarketDataMessage.PayloadOneofCase.Snapshot)
                             {
                                 var s = msg.Snapshot;
-                                // Extra persistent log to make snapshot reception explicit
-                                PersistToLocalFile($"Received SNAPSHOT Instrument={s.InstrumentId} Seq={s.Sequence}");
                                 var ent = new SnapshotEntity
                                 {
                                     InstrumentId = s.InstrumentId,
@@ -134,20 +144,14 @@ namespace MarketDataClient.Workers
                                     CreatedAt = DateTime.UtcNow
                                 };
 
-                                try
-                                {
-                                    db.Snapshots.Add(ent);
-                                    await db.SaveChangesAsync(stoppingToken);
-                                    _logger.LogInformation("Persisted snapshot Id={Id} Instrument={Instrument} Seq={Seq}",
-                                        ent.Id, ent.InstrumentId, ent.Sequence);
-                                    PersistToLocalFile($"Persisted SNAPSHOT Id={ent.Id} Instrument={ent.InstrumentId} Seq={ent.Sequence}");
-                                }
-                                catch (Exception saveEx)
-                                {
-                                    _logger.LogError(saveEx, "Failed to persist snapshot to DB.");
-                                    PersistToLocalFile($"FAILED to persist SNAPSHOT Instrument={ent.InstrumentId} Seq={ent.Sequence} Error={saveEx.Message}");
-                                }
+                                db.Snapshots.Add(ent);
+                                await db.SaveChangesAsync(stoppingToken);
 
+                                _logger.LogInformation("Persisted snapshot Id={Id} Instrument={Instrument} Seq={Seq}",
+                                    ent.Id, ent.InstrumentId, ent.Sequence);
+                                PersistToLocalFile($"Persisted SNAPSHOT Id={ent.Id} Instrument={ent.InstrumentId} Seq={ent.Sequence}");
+
+                                // Forward to shared in-memory service for UI consumption 
                                 try { hub?.ApplySnapshot(s); } catch (Exception ex) { _logger.LogWarning(ex, "Failed to apply snapshot to hub"); }
                             }
                             else if (msg.PayloadCase == MarketDataMessage.PayloadOneofCase.Update)
@@ -161,34 +165,20 @@ namespace MarketDataClient.Workers
                                     CreatedAt = DateTime.UtcNow
                                 };
 
-                                try
-                                {
-                                    db.Updates.Add(ent);
-                                    await db.SaveChangesAsync(stoppingToken);
-                                    _logger.LogInformation("Persisted update Id={Id} Instrument={Instrument} Seq={Seq}",
-                                        ent.Id, ent.InstrumentId, ent.Sequence);
-                                    PersistToLocalFile($"Persisted UPDATE Id={ent.Id} Instrument={ent.InstrumentId} Seq={ent.Sequence}");
-                                }
-                                catch (Exception saveEx)
-                                {
-                                    _logger.LogError(saveEx, "Failed to persist update to DB.");
-                                    PersistToLocalFile($"FAILED to persist UPDATE Instrument={ent.InstrumentId} Seq={ent.Sequence} Error={saveEx.Message}");
-                                }
+                                db.Updates.Add(ent);
+                                await db.SaveChangesAsync(stoppingToken);
 
+                                _logger.LogInformation("Persisted update Id={Id} Instrument={Instrument} Seq={Seq}",
+                                    ent.Id, ent.InstrumentId, ent.Sequence);
+                                PersistToLocalFile($"Persisted UPDATE Id={ent.Id} Instrument={ent.InstrumentId} Seq={ent.Sequence}");
+
+                                // Forward to shared in-memory service for UI consumption 
                                 try { hub?.ApplyUpdate(u); } catch (Exception ex) { _logger.LogWarning(ex, "Failed to apply update to hub"); }
-                            }
-                            else if (msg.PayloadCase == MarketDataMessage.PayloadOneofCase.EmptySnapshot)
-                            {
-                                // EmptySnapshot is sent when a client is unsubscribed — ignore but log persistently
-                                PersistToLocalFile($"Received EMPTY_SNAPSHOT Instrument={msg.EmptySnapshot.InstrumentId}");
-                            }
-                            else
-                            {
-                                PersistToLocalFile($"Received unknown payload case: {msg.PayloadCase}");
                             }
                         }
                         catch (OperationCanceledException)
                         {
+                            // cancellation requested while persisting, break out so cleanup can occur
                             PersistToLocalFile("OperationCanceledException while persisting");
                             break;
                         }
@@ -199,6 +189,7 @@ namespace MarketDataClient.Workers
                         }
                     }
 
+                    // If response stream ended normally, log and loop/reconnect
                     _logger.LogWarning("Persister response stream ended — will attempt reconnect.");
                     PersistToLocalFile("Response stream ended - will attempt reconnect");
                 }
@@ -206,6 +197,7 @@ namespace MarketDataClient.Workers
                 {
                     _logger.LogInformation("Persister cancellation requested, cleaning up...");
                     PersistToLocalFile("Cancellation requested - cleaning up");
+                    
                     break;
                 }
                 catch (RpcException rex) when (rex.StatusCode == Grpc.Core.StatusCode.Unavailable || rex.StatusCode == Grpc.Core.StatusCode.Internal)
@@ -225,16 +217,29 @@ namespace MarketDataClient.Workers
                 }
                 finally
                 {
+                    // Attempt to tell the server we're done.
                     try
                     {
                         if (call != null)
                         {
-                            try { await call.RequestStream.CompleteAsync(); } catch (Exception ex) { _logger.LogDebug(ex, "Failed to CompleteAsync persister request stream (ignored)."); PersistToLocalFile($"CompleteAsync failed: {ex.Message}"); }
+                            try
+                            {
+                                await call.RequestStream.CompleteAsync();
+                            }
+                            catch (Exception ex)
+                            {
+                                _logger.LogDebug(ex, "Failed to CompleteAsync persister request stream (ignored).");
+                                PersistToLocalFile($"CompleteAsync failed: {ex.Message}");
+                            }
                         }
                     }
-                    catch { }
+                    catch { /* ignore */ }
 
-                    try { channel?.Dispose(); } catch { }
+                    try
+                    {
+                        channel?.Dispose();
+                    }
+                    catch { /* ignore */ }
                 }
 
                 // exponential backoff with jitter
