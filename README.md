@@ -63,3 +63,5 @@ The repository includes a `docker/docker-compose.yml` which:
 # from repo root: MarketDataSimulator/
 docker compose -f Docker/docker-compose.yml up --build
 
+## Run detached:
+
