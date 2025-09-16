@@ -66,12 +66,14 @@ docker compose -f Docker/docker-compose.yml up --build
 
 **Run Detached**
 ```bash
-#docker compose -f Docker/docker-compose.yml up --build -d
+#
+docker compose -f Docker/docker-compose.yml up --build -d
 ```
 
 **Stop and Remove**
 ```bash
-#docker compose -f Docker/docker-compose.yml down
+#
+docker compose -f Docker/docker-compose.yml down
 ```
 
 ## Run locally with dotnet (dev)
