@@ -21,7 +21,7 @@ This README shows how to run the app cross-platform (Windows / macOS / Linux) ei
 - [Graceful shutdown (Ctrl+C / SIGINT)](#graceful-shutdown-ctrlc--sigint)
 - [Advanced: migrations and EF tools](#advanced-migrations-and-ef-tools)
 - [Development notes & file layout](#development-notes--file-layout)
-- [License / Contributing](#license--contributing)
+
 
 ---
 
@@ -61,6 +61,7 @@ The repository includes a `docker/docker-compose.yml` which:
 
 ```bash
 # from repo root: MarketDataSimulator/
-docker compose -f Docker/docker-compose.yml up --build
+docker compose -f Docker/docker-compose.yml up --build 
+ 
 
 
