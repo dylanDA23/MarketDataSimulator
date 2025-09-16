@@ -13,8 +13,8 @@ This README shows how to run the app cross-platform (Windows / macOS / Linux) ei
 - [Prerequisites](#prerequisites)
 - [Quickstart (Docker / docker-compose) — recommended](#quickstart-docker--docker-compose---recommended)
 - [Run locally with dotnet (dev)](#run-locally-with-dotnet-dev)
-  - [Start Server](*start-server)
-  - [Start Client (UI + persistence)](*start-client-ui--persistence)
+  - [Start Server](#start-server)
+  - [Start Client (UI + persistence)](#start-client-ui--persistence)
 - [Environment variables & configuration](#environment-variables--configuration)
 - [Verifying persistence (snapshots & updates)](#verifying-persistence-snapshots--updates)
 - [Logs & troubleshooting](#logs--troubleshooting)
@@ -75,7 +75,7 @@ Below are direct dotnet run instructions for each OS. Use whichever host/port ma
   ```
   Important: The client and server use environment variables for DB connection strings. See Environment variables & configuration
   ```
-**Start Server**
+### Start Server
 
 ---
 
@@ -117,7 +117,7 @@ dotnet run
 ```
 > Note: Live mode requires network connectivity to Binance. If you are behind a corporate proxy or firewall, Live mode may fail.
 
-**Start Client (UI only)**
+### Start Client
 
 ---
 
