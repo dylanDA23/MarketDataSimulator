@@ -25,9 +25,10 @@ services:
       postgres_server:
         condition: service_healthy
     environment:
-      - ConnectionStrings__DefaultConnection=Host=postgres_server;Port=5432;Database=marketdb;Username=postgres;Password=postgres
-      - MarketFeed__Mode=Live
+      # Connection string for server (point to postgres_server inside the network)
       - SERVER_POSTGRES_CONN=Host=postgres_server;Port=5432;Username=postgres;Password=postgres;Database=marketdb
+      # Use "Live" to pull from Binance, or "Simulation" to use generated data
+      - MARKET_FEED_MODE=Simulation
     networks:
       - marketnet
     ports:
@@ -43,12 +44,15 @@ services:
       marketdata_server:
         condition: service_started
     environment:
-      - PGHOST=postgres_server
-      - PGPORT=5432
+      # where the server is reachable inside the docker network
       - MARKETDATA_SERVER_URL=http://marketdata_server:5000
-      - CLIENT_POSTGRES_CONN=Host=postgres_client;Port=5432;Username=postgres;Password=postgres;Database=clientdb
+      # Client should talk to the same Postgres service in-compose
+      - CLIENT_POSTGRES_CONN=Host=postgres_server;Port=5432;Username=postgres;Password=postgres;Database=marketdb
+      # persist/instruments can be controlled via env or CLI args in entrypoint if you implement it.
     networks:
       - marketnet
+    tty: true
+    stdin_open: true
 
 volumes:
   postgres_data:
