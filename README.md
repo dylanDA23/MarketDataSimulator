@@ -75,6 +75,55 @@ Below are direct dotnet run instructions for each OS. Use whichever host/port ma
   ```
   Important: The client and server use environment variables for DB connection strings. See Environment variables & configuration
   ```
+**Start Server**
+
+---
+
+***Start Server Simulation mode:***
+
+> Default server behaviour is Simulation mode.
+
+(macOS / Linux / WSL)
+```
+cd MarketDataSimulator/MarketDataServer
+export SERVER_POSTGRES_CONN="Host=127.0.0.1;Port=5432;Username=postgres;Password=postgres;Database=marketdb"
+dotnet run
+```
+(Windows, PowerShell)
+```
+cd .\MarketDataServer
+$env:SERVER_POSTGRES_CONN = "Host=127.0.0.1;Port=5432;Username=postgres;Password=postgres;Database=marketdb"
+dotnet run
+```
+Server defaults to listening on http://localhost:5000 (check console logs).
+
+***Start Server (Live / Binance):***
+
+> Set feed mode to Live, this will attempt to connect to Binance APIs.
+
+(macOS / Linux / WSL)
+```
+cd MarketDataSimulator/MarketDataServer
+export MARKET_FEED_MODE="Live"
+export SERVER_POSTGRES_CONN="Host=127.0.0.1;Port=5432;Username=postgres;Password=postgres;Database=marketdb"
+dotnet run
+```
+(Windows, PowerShell)
+```
+cd .\MarketDataServer
+$env:MARKET_FEED_MODE = "Live"
+$env:SERVER_POSTGRES_CONN = "Host=127.0.0.1;Port=5432;Username=postgres;Password=postgres;Database=marketdb"
+dotnet run
+```
+> Note: Live mode requires network connectivity to Binance. If you are behind a corporate proxy or firewall, Live mode may fail.
+
+**Start Client (UI only)**
+
+---
+
+> Client connects directly to the server and renders orderbooks.
+
+
   
 
 
