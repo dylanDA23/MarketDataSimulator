@@ -61,7 +61,25 @@ The repository includes a `docker/docker-compose.yml` which:
 
 ```bash
 # from repo root: MarketDataSimulator/
-docker compose -f Docker/docker-compose.yml up --build 
- 
+docker compose -f Docker/docker-compose.yml up --build
+```
+
+**Run Detached**
+```bash
+#docker compose -f Docker/docker-compose.yml up --build -d
+```
+
+**Stop and Remove**
+```bash
+#docker compose -f Docker/docker-compose.yml down
+```
+
+## Run locally with dotnet (dev)
+Below are direct dotnet run instructions for each OS. Use whichever host/port matches your environment.
+  ```
+  Important: The client and server use environment variables for DB connection strings. See Environment variables & configuration
+  ```
+  
+
 
 
