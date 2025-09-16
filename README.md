@@ -62,17 +62,11 @@ The repository includes a `docker/docker-compose.yml` which:
 ```bash
 # from repo root: MarketDataSimulator/
 docker compose -f Docker/docker-compose.yml up --build
-```
 
-**Run Detached**
-```bash
-#
+# Run Detached
 docker compose -f Docker/docker-compose.yml up --build -d
-```
 
-**Stop and Remove**
-```bash
-#
+# Stop and Remove
 docker compose -f Docker/docker-compose.yml down
 ```
 
