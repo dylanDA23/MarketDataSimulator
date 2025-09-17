@@ -17,9 +17,7 @@ This README shows how to run the app cross-platform (Windows / macOS / Linux) ei
   - [Start Client (UI + persistence)](#start-client-ui--persistence)
 - [Environment variables & configuration](#environment-variables--configuration)
 - [Verifying persistence (snapshots & updates)](#verifying-persistence-snapshots--updates)
-- [Logs & troubleshooting](#logs--troubleshooting)
 - [Graceful shutdown (Ctrl+C / SIGINT)](#graceful-shutdown-ctrlc--sigint)
-- [Advanced: migrations and EF tools](#advanced-migrations-and-ef-tools)
 - [Development notes & file layout](#development-notes--file-layout)
 
 
@@ -206,6 +204,51 @@ psql "host=127.0.0.1 port=5432 user=postgres dbname=marketdb" -c 'SELECT id, ins
 psql "host=127.0.0.1 port=5432 user=postgres dbname=marketdb" -c 'SELECT id, instrumentid, sequence, createdat FROM "Updates" ORDER BY id DESC LIMIT 20;'
 
 ```
+
+## Graceful shutdown (Ctrl+C / SIGINT)
+Both server and client have Ctrl+C handlers. Press Ctrl+C to request graceful shutdown; the apps will:
+
+- request gRPC stream completion,
+
+- stop hosted services,
+
+- attempt to apply outbound flush / graceful cleanup,
+
+-and then exit.
+
+If a process is hung, use docker compose down (containers) or kill as last resort.
+
+## Development notes & file layout
+Important files:
+```
+MarketDataSimulator/
+├─ MarketDataServer/
+│  ├─ Program.cs
+│  ├─ Services/MarketDataService.cs
+│  ├─ Sim/OrderBookManager.cs
+│  ├─ Sim/SimulationFeed.cs
+│  ├─ Sim/BinanceLiveFeed.cs
+│  ├─ Data/ServerPersistenceDbContext.cs
+│  └─ Protos/market.proto
+├─ MarketDataClient/
+│  ├─ Program.cs
+│  ├─ MarketDataConsoleClient.cs
+│  ├─ Services/MarketDataService.cs
+│  ├─ Workers/PersisterWorker.cs
+│  └─ Data/ClientPersistenceDbContext.cs
+└─ Docker/
+   ├─ docker-compose.yml
+   ├─ MarketDataClient.Dockerfile
+   └─ MarketDataServer.Dockerfile
+```
+Where logs appear
+
+- Client UI → stdout (clean UI).
+
+- Persister → stderr (and ~/market-client-persister.log).
+
+- Server → stdout.
+
 
 
 
