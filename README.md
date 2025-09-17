@@ -121,7 +121,94 @@ dotnet run
 
 ---
 
+***Start Client (UI only):***
+
 > Client connects directly to the server and renders orderbooks.
+
+(macOS / Linux / WSL)
+```
+cd MarketDataSimulator
+export MARKETDATA_SERVER_URL="http://localhost:5000"
+dotnet run --project MarketDataClient -- \
+  --server "$MARKETDATA_SERVER_URL" \
+  --instruments BTCUSDT,ETHUSDT
+```
+
+(Windows, PowerShell)
+```
+cd .\MarketDataSimulator
+$env:MARKETDATA_SERVER_URL = "http://localhost:5000"
+dotnet run --project .\MarketDataClient -- --server $env:MARKETDATA_SERVER_URL --instruments BTCUSDT,ETHUSDT
+```
+
+
+***Start Client (UI + persistence):***
+
+> When you pass --persist, the client starts a background Host (PersisterWorker) which is the only gRPC consumer. The UI reads from an in-memory hub forwarded by the persister.
+
+
+(macOS / Linux / WSL)
+```
+cd MarketDataSimulator
+export MARKETDATA_SERVER_URL="http://localhost:5000"
+export CLIENT_POSTGRES_CONN="Host=127.0.0.1;Port=5432;Username=postgres;Password=postgres;Database=marketdb"
+
+# Persist runs the persister logs to stderr. Redirect stderr if you want a clean UI:
+dotnet run --project MarketDataClient -- \
+  --server "$MARKETDATA_SERVER_URL" \
+  --instruments BTCUSDT,ETHUSDT \
+  --persist 2> ~/market-client.log
+
+```
+
+
+(Windows, PowerShell)
+```
+cd .\MarketDataSimulator
+$env:MARKETDATA_SERVER_URL = "http://localhost:5000"
+$env:CLIENT_POSTGRES_CONN = "Host=127.0.0.1;Port=5432;Username=postgres;Password=postgres;Database=marketdb"
+
+dotnet run --project .\MarketDataClient -- --server $env:MARKETDATA_SERVER_URL --instruments BTCUSDT,ETHUSDT --persist 2> $HOME\market-client.log
+
+```
+> Important behavior notes
+- Persister logs are written to stderr by design so the UI (stdout) stays clean. If your terminal merges stdout/stderr you will see persister logs. Redirect stderr 2> to save persister logs to a file.
+- Persister also writes ~/market-client-persister.log as a fallback and as an easy file to inspect.
+
+## Environment variables & configuration
+
+- SERVER_POSTGRES_CONN — Postgres connection string used by server. Example:
+  
+```
+Host=127.0.0.1;Port=5432;Username=postgres;Password=postgres;Database=marketdb
+
+```
+- CLIENT_POSTGRES_CONN — Postgres connection string used by client persister. If unset, the client falls back to SERVER_POSTGRES_CONN.
+- MARKET_FEED_MODE — "Simulation" (default) or "Live" (Binance websocket + REST).
+- MARKETDATA_SERVER_URL — Base URL client connects to; default http://localhost:5000.
+- INSTRUMENTS — (Used by persister if CLI --instruments not provided) e.g. BTCUSDT,ETHUSDT.
+
+Docker compose uses service names as hosts (e.g. Host=postgres_server), which is different from host OS localhost.
+
+## Verifying persistence (snapshots & updates)
+
+Where data is persisted:
+- Client DB: Snapshots and Updates (entities in ClientPersistenceDbContext).
+
+Check DB with psql:
+> Example commands to check counts and latest rows (adjust host/port/credentials):
+
+```
+psql "host=127.0.0.1 port=5432 user=postgres dbname=marketdb" -c 'SELECT count(*) FROM "Snapshots";'
+psql "host=127.0.0.1 port=5432 user=postgres dbname=marketdb" -c 'SELECT count(*) FROM "Updates";'
+
+psql "host=127.0.0.1 port=5432 user=postgres dbname=marketdb" -c 'SELECT id, instrumentid, sequence, createdat FROM "Snapshots" ORDER BY id DESC LIMIT 20;'
+psql "host=127.0.0.1 port=5432 user=postgres dbname=marketdb" -c 'SELECT id, instrumentid, sequence, createdat FROM "Updates" ORDER BY id DESC LIMIT 20;'
+
+```
+
+
+
 
 
   
