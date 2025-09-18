@@ -223,23 +223,25 @@ Important files:
 ```
 MarketDataSimulator/
 ├─ MarketDataServer/
-│  ├─ Program.cs
-│  ├─ Services/MarketDataService.cs
-│  ├─ Sim/OrderBookManager.cs
-│  ├─ Sim/SimulationFeed.cs
-│  ├─ Sim/BinanceLiveFeed.cs
-│  ├─ Data/ServerPersistenceDbContext.cs
-│  └─ Protos/market.proto
+│ ├─ Program.cs
+│ ├─ Services/MarketDataService.cs
+│ ├─ Sim/OrderBookManager.cs
+│ ├─ Sim/SimulationFeed.cs
+│ ├─ Sim/BinanceLiveFeed.cs
+│ ├─ Data/ServerPersistenceDbContext.cs
+│ └─ Protos/market.proto
 ├─ MarketDataClient/
-│  ├─ Program.cs
-│  ├─ MarketDataConsoleClient.cs
-│  ├─ Services/MarketDataService.cs
-│  ├─ Workers/PersisterWorker.cs
-│  └─ Data/ClientPersistenceDbContext.cs
+│ ├─ Program.cs
+│ ├─ MarketDataConsoleClient.cs
+│ ├─ Services/MarketDataService.cs
+│ ├─ Workers/PersisterWorker.cs
+│ ├─ Data/ClientPersistenceDbContext.cs
+│ ├─ Data/ClientPersistenceDbContextNewClass.cs
+│ └─ UI/ConsoleModelsNewClass.cs
 └─ Docker/
-   ├─ docker-compose.yml
-   ├─ MarketDataClient.Dockerfile
-   └─ MarketDataServer.Dockerfile
+├─ docker-compose.yml
+├─ MarketDataClient.Dockerfile
+└─ MarketDataServer.Dockerfile
 ```
 Where logs appear
 
