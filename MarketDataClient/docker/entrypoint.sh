@@ -9,3 +9,6 @@ until nc -z "$PGHOST" "$PGPORT" || [ $attempt -ge 60 ]; do
   sleep 1
 done
 exec dotnet MarketDataClient.dll
+
+
+#entrypoint.sh command to run docker 
