@@ -11,4 +11,3 @@ done
 exec dotnet MarketDataClient.dll
 
 
-#entrypoint.sh command to run docker 
